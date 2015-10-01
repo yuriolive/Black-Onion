@@ -12,6 +12,7 @@
 	mb_internal_encoding("UTF-8");
 	$context = stream_context_create(array('http' => array('header'=>'Connection: close\r\n')));
 
+	// Keys do Google
 	$keyPosicao = 0;
 	$keyCounter = 0;
 	$key = array(
@@ -19,10 +20,9 @@
 		"AIzaSyCvcEzsAb3YujPLcPJyjCu778_sXkysATo",
 		"AIzaSyAo2Y8Jp5kHcb8-rYk0ag9UilcvJLFilu0",
 		"AIzaSyBhMyKiRWLikA9uPL-APsxGqi1U3CJCdFQ",
-		"",
-		"",
+		"AIzaSyCt_pNFzZZoL_Am_uArzYy8v_PwqV31mHY",
+		"AIzaSyAuGL8iRZ0QCdkwLs-OO-ZCCBn7MzhCku4",
 	);
-
 
 
 
@@ -76,7 +76,6 @@
 
 		sleep(2);
 	}
-
 
 	mysql_close($my_connect);
 
