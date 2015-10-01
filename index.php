@@ -1,4 +1,15 @@
 <?php
+
+$WGS84_a = 6378137
+
+	function long($fi) {
+	  pi()*$WGS84_a*cos($fi)/( 180*pow(1 - exp(2),pow(sin($fi), 2)) );
+	}
+
+	function lat($fi) {
+    pi()*$WGS84_a*(1-exp(2))/(180 * pow( (1 - exp(2)*pow(sin($fi),2) ), 3/2));
+	}
+
 	$my_connect = mysql_connect("localhost","root","");
 	if (!$my_connect) {	die('Error connecting to the database: ' . mysql_error()); }
 
@@ -24,10 +35,13 @@
 	);
 
 
-
+//====================================================================
 
 	$lat = "-22.8893559";
 	$lng = "-47.0799138";
+
+
+
 	$haveToken = 0;
 	while(1) {
 		$keyCounter++;
@@ -77,7 +91,7 @@
 		sleep(2);
 	}
 
-
+// ======================================================
 	mysql_close($my_connect);
 
 
