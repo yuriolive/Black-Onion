@@ -1,13 +1,15 @@
 <?php
 
-    $WGS84_a = 6378137;
 
 	function lng($fi) {
-        pi()*$WGS84_a*cos($fi)/sqrt(( 180*pow(1 - exp(2),pow(sin($fi), 2)) ));
-	}
+        $WGS84_a = 6378137;
+        $num = pi()*$WGS84_a*cos($fi);
+        $den = 180 * sqrt(1 - exp(2)*pow(sin($fi), 2));
+        return $num/$den;
+    }
 
 	function lat($fi) {
-        pi()*$WGS84_a*(1-exp(2))/(180 * pow( (1 - exp(2)*pow(sin($fi),2) ), 3/2));
+        return 111132.954 - 559.822*cos(2*$fi) + 1.175*cos(4*$fi);
 	}
 
 	$my_connect = mysql_connect("localhost","root","");
@@ -39,14 +41,15 @@
 	$lat = "-22.8893559";
 	$lng = "-47.0799138";
 
-    $lat_delta = lat(lat);
-    $lng_delta = lng(lng);
-    $lat_beg = $lat - 100/$lat_delta;
-    $lng_beg = $lng - 100/$lng_delta;
-    $lat_end = $lat + 100/$lat_delta;
-    $lng_end = $lng + 100/$lng_delta;
-    $lat_radio = 5/$lat_delta;
-    $lng_delta = 5/$lng_delta;
+    $lat_delta = lat((float)$lat);
+    $lng_delta = lng((float)$lng);
+    $lat_beg = $lat - 100000/$lat_delta;
+    $lng_beg = $lng - 100000/$lng_delta;
+    $lat_end = $lat + 100000/$lat_delta;
+    $lng_end = $lng + 100000/$lng_delta;
+    $lat_radio = 5000/$lat_delta;
+    $lng_radio = 5000/$lng_delta;
+    echo "lat: $lat_beg - $lat_end, lng: $lng_beg = $lng_end";
 
     for($lat = $lat_beg; $lat <= $lat_end; $lat += $lat_radio) {
         for($lng = $lng_beg; $lng <= $lng_end; $lng += $lng_radio) {
