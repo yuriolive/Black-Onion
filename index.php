@@ -3,11 +3,11 @@
     $WGS84_a = 6378137;
 
 	function lng($fi) {
-	  pi()*$WGS84_a*cos($fi)/sqrt(( 180*pow(1 - exp(2),pow(sin($fi), 2)) ));
+        pi()*$WGS84_a*cos($fi)/sqrt(( 180*pow(1 - exp(2),pow(sin($fi), 2)) ));
 	}
 
 	function lat($fi) {
-    pi()*$WGS84_a*(1-exp(2))/(180 * pow( (1 - exp(2)*pow(sin($fi),2) ), 3/2));
+        pi()*$WGS84_a*(1-exp(2))/(180 * pow( (1 - exp(2)*pow(sin($fi),2) ), 3/2));
 	}
 
 	$my_connect = mysql_connect("localhost","root","");
@@ -43,13 +43,13 @@
     $lng_delta = lng(lng);
     $lat_beg = $lat - 100/$lat_delta;
     $lng_beg = $lng - 100/$lng_delta;
-    $lat_end = $lat + 200/$lat_delta;
-    $lng_end = $lng + 200/$lng_delta;
+    $lat_end = $lat + 100/$lat_delta;
+    $lng_end = $lng + 100/$lng_delta;
     $lat_radio = 5/$lat_delta;
     $lng_delta = 5/$lng_delta;
 
-    for($lat = $lat_beg; $lat < $lat_end; $lat += $lat_radio) {
-        for($lng = $lng_beg; $lng < $lng_end; $lng += $lng_radio) {
+    for($lat = $lat_beg; $lat <= $lat_end; $lat += $lat_radio) {
+        for($lng = $lng_beg; $lng <= $lng_end; $lng += $lng_radio) {
 
             $haveToken = 0;
             while(1) {
