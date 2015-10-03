@@ -3,7 +3,7 @@
 
 	function lng($fi) {
         $WGS84_a = 6378137;
-        $num = pi()*$WGS84_a*cos($fi);
+        $num = pi()*$WGS84_a*abs(cos($fi));
         $den = 180 * sqrt(1 - exp(2)*pow(sin($fi), 2));
         return $num/$den;
     }
@@ -47,61 +47,96 @@
     $lng_beg = $lng - 100000/$lng_delta;
     $lat_end = $lat + 100000/$lat_delta;
     $lng_end = $lng + 100000/$lng_delta;
+    $lat_center = $lat;
+    $lng_center = $lng;
     $lat_radio = 5000/$lat_delta;
     $lng_radio = 5000/$lng_delta;
-    echo "lat: $lat_beg - $lat_end, lng: $lng_beg = $lng_end";
 
-    for($lat = $lat_beg; $lat <= $lat_end; $lat += $lat_radio) {
-        for($lng = $lng_beg; $lng <= $lng_end; $lng += $lng_radio) {
+    $step = 0;
+    $direction = 3;
+    $max_step = 0;
+    $first = false;
+    for($lat = $lat_center, $lng = $lng_center; $lat <= $lat_end && $lat >= $lat_beg && $lng <= $lng_end && $lng >= $lng_beg;) {
 
-            $haveToken = 0;
-            while(1) {
-                $keyCounter++;
-                if($keyCounter == 900) {
-                    $keyPosicao++;
-                    $keyCounter = 0;
-                }
-
-                if($haveToken) {
-                    $json = file_get_contents(
-                        "https://maps.googleapis.com/maps/api/place/radarsearch/json?location=" . $lat . "," . $lng . 
-                        "&radius=5000&types=bar|night_club|stadium&key=" . $key[$keyPosicao] . "&pagetoken=" . $next_page_token,
-                        false,
-                        $context
-                    );
-                } else {
-                    $json = file_get_contents(
-                        "https://maps.googleapis.com/maps/api/place/radarsearch/json?location=" . $lat . "," . $lng .
-                        "&radius=5000&types=bar|night_club|stadium&key=" . $key[$keyPosicao],
-                        false,
-                        $context
-                    );
-                }
-
-                $json_decode = json_decode($json, true);
-                $locais = $json_decode['results'];
-
-                foreach ($locais as $local) {
-                    mysql_query("INSERT INTO tbgoogle (place_id, name, lat, lng, rating, vicinity, type) VALUES (
-                            '" . $local['place_id'] . "', 
-                            '" . $local['name'] . "', 
-                            '" . $local['geometry']['location']['lat'] . "', 
-                            '" . $local['geometry']['location']['lng'] . "', 
-                            '" . $local['rating'] . "',  
-                            '" . $local['vicinity'] . "', 
-                            '" . $local['types'][0] . "' 
-                            );");
-                }
-
-                if(isset($json_decode['next_page_token'])) {
-                    $haveToken = 1;
-                    $next_page_token = $json_decode['next_page_token'];
-                } else {
-                    break;
-                }
-
-                sleep(2);
+    echo "lat: $lat, lng: $lng\n";
+        $haveToken = 0;
+        while(1) {
+          $keyCounter++;
+            if($keyCounter == 900) {
+                $keyPosicao++;
+                $keyCounter = 0;
             }
+
+            if($haveToken) {
+                $json = file_get_contents(
+                    "https://maps.googleapis.com/maps/api/place/radarsearch/json?location=" . $lat . "," . $lng . 
+                    "&radius=5000&types=bar|night_club|stadium&key=" . $key[$keyPosicao] . "&pagetoken=" . $next_page_token,
+                    false,
+                    $context
+                );
+            } else {
+                $json = file_get_contents(
+                    "https://maps.googleapis.com/maps/api/place/radarsearch/json?location=" . $lat . "," . $lng .
+                    "&radius=5000&types=bar|night_club|stadium&key=" . $key[$keyPosicao],
+                    false,
+                    $context
+                );
+            }
+
+            $json_decode = json_decode($json, true);
+            $locais = $json_decode['results'];
+
+            foreach ($locais as $local) {
+                mysql_query("INSERT INTO tbgoogle (place_id, name, lat, lng, rating, vicinity, type) VALUES (
+                        '" . $local['place_id'] . "', 
+                        '" . $local['name'] . "', 
+                        '" . $local['geometry']['location']['lat'] . "', 
+                        '" . $local['geometry']['location']['lng'] . "', 
+                        '" . $local['rating'] . "',  
+                        '" . $local['vicinity'] . "', 
+                        '" . $local['types'][0] . "' 
+                        );");
+            }
+
+            if(isset($json_decode['next_page_token'])) {
+                $haveToken = 1;
+                $next_page_token = $json_decode['next_page_token'];
+            } else {
+                break;
+            }
+
+            sleep(2);
+        }
+
+        if($step == $max_step) {
+            $direction++;
+            $step = 0;
+            if ($direction == 4) {
+                $direction = 0;
+                $lng += $lng_radio;
+                $lat += $lat_radio;
+                $max_step += 2;
+                $first = true;
+            }
+        }
+        if(!$first) {
+            switch($direction) {
+            case 0:
+                $lat -= $lat_radio;
+                break;
+            case 1:
+                $lng -= $lng_radio;
+                break;
+            case 2:
+                $lat += $lat_radio;
+                break;
+            case 3:
+                $lng += $lng_radio;
+                break;
+            }
+            $step++;
+        } else {
+            $first = false;
         }
     }
 
@@ -133,6 +168,3 @@
 		);
 	}*/
 ?>
-
-
-
