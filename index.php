@@ -67,9 +67,9 @@
 		"AIzaSyCvcEzsAb3YujPLcPJyjCu778_sXkysATo",
 		"AIzaSyAo2Y8Jp5kHcb8-rYk0ag9UilcvJLFilu0",
 		"AIzaSyBhMyKiRWLikA9uPL-APsxGqi1U3CJCdFQ",
-		"AIzaSyCt_pNFzZZoL_Am_uArzYy8v_PwqV31mHY",
 		"AIzaSyAuGL8iRZ0QCdkwLs-OO-ZCCBn7MzhCku4",
-		"AIzaSyD5oEahVob9PzIfthabvAyN7VP9e7k-ByA"
+		"AIzaSyD5oEahVob9PzIfthabvAyN7VP9e7k-ByA",
+		"AIzaSyCt_pNFzZZoL_Am_uArzYy8v_PwqV31mHY",
 	);
 
 
@@ -83,14 +83,14 @@
 	$lng = -47.0799138;
     $lat_delta = lat((float)$lat);
     $lng_delta = lng((float)$lng);
-    $lat_beg = $lat - 100000/$lat_delta;
-    $lng_beg = $lng - 100000/$lng_delta;
-    $lat_end = $lat + 100000/$lat_delta;
-    $lng_end = $lng + 100000/$lng_delta;
+    $lat_beg = $lat - 200000/$lat_delta;
+    $lng_beg = $lng - 200000/$lng_delta;
+    $lat_end = $lat + 200000/$lat_delta;
+    $lng_end = $lng + 200000/$lng_delta;
     $lat_center = $lat;
     $lng_center = $lng;
-    $lat_radio = 5000/$lat_delta;
-    $lng_radio = 5000/$lng_delta;
+    $lat_radio = 500/$lat_delta;
+    $lng_radio = 500/$lng_delta;
 
 	fwrite($logFile, "************************\n");
 	fwrite($logFile, "STARTED VALUES\n");
@@ -109,7 +109,7 @@
 		while(1) {
 
 			$keyCounter++;
-			if($keyCounter > 985) {
+			if($keyCounter > 950) {
 				$keyPosicao++;
 				$keyCounter = 0;
 			}
@@ -135,15 +135,19 @@
 			
 			$json_decode = json_decode($json, true);
 
-			if($json_decode['status'] != "OK") {
+			if($json_decode['status'] == "REQUEST_DENIED") {
 				fwrite($logFile, "************************\n");
 				fwrite($logFile, "ERROR\n");
 				fwrite($logFile, "Current position: (lat: $lat; lng: $lng)\n");
 				fwrite($logFile, "Google error: ". $json_decode['status']  ."\n");
 				fwrite($logFile, "Key: ". $key[$keyPosicao]  ."\n");
 				fwrite($logFile, "KeyPosicao: $keyPosicao\n");
+				fwrite($logFile, "Step: $step\n");
+				fwrite($logFile, "Direction: $direction\n");
+				fwrite($logFile, "Max_step: $max_step\n");
 				fwrite($logFile, "--------------------------------------");
-				die();
+				$keyPosicao++;
+				$keyCounter = 0;
 			}
 
 			$locais = $json_decode['results'];
