@@ -1,30 +1,7 @@
 <?php
     $logFile = fopen("tbface.log", "w");
 
-    function number_trim($x) {
-        if ($x < 0)
-            return ceil($x);
-        else
-            return floor($x);
-    }
-
-
-	$my_connect = mysql_connect("localhost","root","");
-	if (!$my_connect) {	die('Error connecting to the database: ' . mysql_error()); }
-    mysql_select_db("black_onion", $my_connect);
-    mysql_query("SET NAMES 'utf8'");
-	mysql_query('SET character_set_connection=utf8');
-	mysql_query('SET character_set_client=utf8');
-	mysql_query('SET character_set_results=utf8');
-	mb_internal_encoding("UTF-8");
-	$context = stream_context_create(array('http' => array('header'=>'Connection: close\r\n')));
-    
-    $query_db = "SELECT place_id, name, city, lat, lng FROM tbgoogle ORDER BY rating";
-    $places_res = mysql_query($query_db, $my_connect);
-
-    if($places_res === FALSE) { die(mysql_error()); }
-
-    while($place = mysql_fetch_array($places_res)) {
+    function insercao($place, $my_connect, $context) {
         if(isset($place["city"]) && $place["city"] != NULL) {
             $json = file_get_contents(
                 "https://graph.facebook.com/search?q=". urlencode($place["name"] . " " . $place["city"]) ."&type=page&access_token=1629898650614051|mrLeYR0bO0ym2eIRnzLKp0NZrxU",
@@ -41,6 +18,7 @@
 
         $fb_places = json_decode($json, true);
 
+
         if(isset($fb_places["error"])) {
             fwrite($logFile, $place["place_id"] . "\n");
             die();
@@ -48,6 +26,7 @@
         
         sleep(1);
 
+        $encontrou = 0;
         foreach ($fb_places["data"] as $fb_place) {
             $json_place = file_get_contents(
                 "https://graph.facebook.com/" . $fb_place["id"] . "?access_token=1629898650614051|mrLeYR0bO0ym2eIRnzLKp0NZrxU&fields=location,about,category,name,likes,checkins",
@@ -83,11 +62,61 @@
                         ;"
                     );
                 }
+                $encontrou = 1;
                 break;
             }
-
             sleep(1);
         }
+        return $encontrou;
+    }
+
+    function number_trim($x) {
+        if ($x < 0)
+            return ceil($x);
+        else
+            return floor($x);
+    }
+
+
+	$my_connect = mysql_connect("localhost","root","");
+	if (!$my_connect) {	die('Error connecting to the database: ' . mysql_error()); }
+    mysql_select_db("black_onion", $my_connect);
+    mysql_query("SET NAMES 'utf8'");
+	mysql_query('SET character_set_connection=utf8');
+	mysql_query('SET character_set_client=utf8');
+	mysql_query('SET character_set_results=utf8');
+	mb_internal_encoding("UTF-8");
+	$context = stream_context_create(array('http' => array('header'=>'Connection: close\r\n')));
+    
+    $query_db = "SELECT place_id, name, city, lat, lng FROM tbgoogle ORDER BY rating";
+    $places_res = mysql_query($query_db, $my_connect);
+
+    if($places_res === FALSE) { die(mysql_error()); }
+
+    while($place = mysql_fetch_array($places_res)) {
+        
+        if(insercao($place, $my_connect, $context) == 0) {
+            $str_vector = explode(" ",  $place['name']);
+            $str_quant = count($str_vector);
+            
+            foreach ($str_vector as $newName) {
+                $place['name'] = $newName;
+                if(insercao($place, $my_connect, $context) == 1) {
+                    goto saiu;
+                }
+            }
+            
+            for($i = 0; $i < $str_quant - 1; $i++) { // Combinacao de $str_quant 2 a 2
+                for($j = $i+1; $j < $str_quant; $j++) {
+                    $place['name'] = $str_vector[$i] . " " . $str_vector[$j];
+                    if(insercao($place, $my_connect, $context) == 1) {
+                        goto saiu;
+                    }
+                }
+            } 
+        }
+
+        saiu:
     }    
    
     mysql_close($my_connect);

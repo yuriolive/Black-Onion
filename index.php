@@ -2,14 +2,14 @@
 	
 	$logFile = fopen("tbgoogle.log", "w");
 
-	function lng($fi) {
+	function lng_f($fi) {
         $WGS84_a = 6378137;
         $num = pi()*$WGS84_a*abs(cos($fi));
-        $den = 180 * sqrt(1 - exp(2)*pow(sin($fi), 2));
+        $den = 180 * sqrt(abs(1 - exp(2)*pow(sin($fi), 2)));
         return $num/$den;
     }
 	
-	function lat($fi) {
+	function lat_f($fi) {
         return 111132.954 - 559.822*cos(2*$fi) + 1.175*cos(4*$fi);
 	}
 
@@ -61,15 +61,15 @@
 	$keyPosicao = 0;
 	$keyCounter = 0;
 	$key = array(
-		"AIzaSyC6vPqsahgj_xIj3BoQdeBZ-9hVcE1-TP4",
-		"AIzaSyClBBPrvtQFDej-DdPjnnVxv-W9vDMf1-o",
-		"AIzaSyBYiCewBK7qL2TR6ck_vREPRYFqjUwUsGM",
-		"AIzaSyCvcEzsAb3YujPLcPJyjCu778_sXkysATo",
-		"AIzaSyAo2Y8Jp5kHcb8-rYk0ag9UilcvJLFilu0",
 		"AIzaSyBhMyKiRWLikA9uPL-APsxGqi1U3CJCdFQ",
 		"AIzaSyAuGL8iRZ0QCdkwLs-OO-ZCCBn7MzhCku4",
 		"AIzaSyD5oEahVob9PzIfthabvAyN7VP9e7k-ByA",
 		"AIzaSyCt_pNFzZZoL_Am_uArzYy8v_PwqV31mHY",
+		"AIzaSyC6vPqsahgj_xIj3BoQdeBZ-9hVcE1-TP4",
+		"AIzaSyClBBPrvtQFDej-DdPjnnVxv-W9vDMf1-o",
+		"AIzaSyBYiCewBK7qL2TR6ck_vREPRYFqjUwUsGM",
+		"AIzaSyCvcEzsAb3YujPLcPJyjCu778_sXkysATo",
+		"AIzaSyAo2Y8Jp5kHcb8-rYk0ag9UilcvJLFilu0"
 	);
 
 
@@ -79,19 +79,19 @@
 	/**********************************/
 	/**********************************/
 
-	$lat = -22.8893559;
-	$lng = -47.0799138;
-    $lat_delta = lat((float)$lat);
-    $lng_delta = lng((float)$lng);
-    $lat_beg = $lat - 200000/$lat_delta;
-    $lng_beg = $lng - 200000/$lng_delta;
-    $lat_end = $lat + 200000/$lat_delta;
-    $lng_end = $lng + 200000/$lng_delta;
+	$lat = -23.5620061;
+	$lng = -46.6884428;
+    $lat_delta = lat_f((float)$lat);
+    $lng_delta = lng_f((float)$lng);
+    $lat_beg = $lat - 50000/$lat_delta;
+    $lng_beg = $lng - 50000/$lng_delta;
+    $lat_end = $lat + 50000/$lat_delta;
+    $lng_end = $lng + 50000/$lng_delta;
     $lat_center = $lat;
     $lng_center = $lng;
-    $lat_radio = 500/$lat_delta;
-    $lng_radio = 500/$lng_delta;
-
+    $lat_radio = 300/$lat_delta;
+    $lng_radio = 300/$lng_delta;
+   
 	fwrite($logFile, "************************\n");
 	fwrite($logFile, "STARTED VALUES\n");
 	fwrite($logFile, "lat: $lat;\nlat_delta: $lat_delta;\nlat_beg: $lat_beg;\nlat_end: $lat_end;\nlat_center: $lat_center;\nlat_radio: $lat_radio");
@@ -112,6 +112,20 @@
 			if($keyCounter > 950) {
 				$keyPosicao++;
 				$keyCounter = 0;
+			}
+
+			if($keyPosicao > 8) {
+				fwrite($logFile, "************************\n");
+				fwrite($logFile, "ERROR\n");
+				fwrite($logFile, "Current position: (lat: $lat; lng: $lng)\n");
+				fwrite($logFile, "Google error: ". $json_decode['status']  ."\n");
+				fwrite($logFile, "Key: ". $key[$keyPosicao]  ."\n");
+				fwrite($logFile, "KeyPosicao: $keyPosicao\n");
+				fwrite($logFile, "Step: $step\n");
+				fwrite($logFile, "Direction: $direction\n");
+				fwrite($logFile, "Max_step: $max_step\n");
+				fwrite($logFile, "--------------------------------------");
+				die();
 			}
 
 			if($haveToken) {
@@ -157,7 +171,7 @@
 				$localizacao = parseCidadeBairro($local['vicinity']); 
 				
 				mysql_query(
-						"INSERT INTO tbgoogle (place_id, name, lat, lng, rating, country, state, city, bairro, street, type) VALUES (
+						"INSERT INTO tbgoogle (place_id, name, lat, lng, rating, country, state, city, bairro, street, type, facebook_ID, likes, checkins, insercao) VALUES (
 						'" . $local['place_id'] . "', 
 						'" . $local['name'] . "', 
 						'" . $local['geometry']['location']['lat'] . "', 
@@ -168,7 +182,11 @@
 						'" . $localizacao[1] . "',
 						'" . $localizacao[0] . "',
 						'" . $local['vicinity'] . "',
-						'" . $local['types'][0] . "' 
+						'" . $local['types'][0] . "',
+						'',
+						'',
+						'',
+						'2'
 						);"
 				);
 			}
