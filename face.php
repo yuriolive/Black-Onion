@@ -38,7 +38,7 @@
             $json = file_get_contents(
                 "https://graph.facebook.com/search?center=" . $place['lat'] . "," . $place['lng'] . 
                 "&distance=100&fields=id,name,category,category_list,about,bio,description,general_info,location,talking_about_count,were_here_count,likes,phone,cover,website&q=" .
-                urlencode($place['q']) .
+                urlencode($place['name']) .
                 "&type=place&access_token=1629898650614051|mrLeYR0bO0ym2eIRnzLKp0NZrxU",
                 false,
                 $context
