@@ -1,15 +1,17 @@
 <?php
     $logFile = fopen("tbface.log", "w");
 
-	$my_connect = mysql_connect("localhost","root","");
-	if (!$my_connect) {	die('Error connecting to the database: ' . mysql_error()); }
+    $token = "CAAXKYloWZBSMBAJTFxoCZAfRVKtnBKDYOSZCjip0RoPKdrZBbALDGSpYRqHSNSYS7p4yKbU7oTop9TpJ90CrgB0lfy6koKKgVZAXemiykpK6i2BFG09lS5Yfm9lCZAPibXR72M0XLZC52JZA8DeF0xdeLL5WZAq7XE0zr8gzMeWKnmZBk3BYX63cLM";
+    
+    $my_connect = mysql_connect("localhost","root","");
+    if (!$my_connect) { die('Error connecting to the database: ' . mysql_error()); }
     mysql_select_db("black_onion", $my_connect);
     mysql_query("SET NAMES 'utf8'");
-	mysql_query('SET character_set_connection=utf8');
-	mysql_query('SET character_set_client=utf8');
-	mysql_query('SET character_set_results=utf8');
-	mb_internal_encoding("UTF-8");
-	$context = stream_context_create(array('http' => array('header'=>'Connection: close\r\n')));
+    mysql_query('SET character_set_connection=utf8');
+    mysql_query('SET character_set_client=utf8');
+    mysql_query('SET character_set_results=utf8');
+    mb_internal_encoding("UTF-8");
+    $context = stream_context_create(array('http' => array('header'=>'Connection: close\r\n')));
     
     $query_db = "SELECT place_id, name, city, lat, lng FROM tbgoogle WHERE facebook_ID IS NULL OR facebook_ID='0' ORDER BY rating";
     $places_res = mysql_query($query_db, $my_connect);
@@ -20,11 +22,11 @@
         firstSearchType:
         $json = file_get_contents(
                 "https://graph.facebook.com/search?center=" . $place['lat'] . "," . $place['lng'] . 
-                "&distance=100&fields=id,name,category,category_list,about,bio,description,general_info,location,talking_about_count,were_here_count,likes,phone,cover,website&type=place&access_token=1629898650614051|mrLeYR0bO0ym2eIRnzLKp0NZrxU",
+                "&distance=50&fields=id,name,category,category_list,about,bio,description,general_info,location,talking_about_count,were_here_count,likes,phone,cover,website&type=place&access_token=$token",
                 false,
                 $context
             );  
-        
+            
         $possible_places = json_decode($json, true);
         
         if(isset($possible_places['error'])) {
@@ -39,7 +41,7 @@
                 "https://graph.facebook.com/search?center=" . $place['lat'] . "," . $place['lng'] . 
                 "&distance=100&fields=id,name,category,category_list,about,bio,description,general_info,location,talking_about_count,were_here_count,likes,phone,cover,website&q=" .
                 urlencode($place['name']) .
-                "&type=place&access_token=1629898650614051|mrLeYR0bO0ym2eIRnzLKp0NZrxU",
+                "&type=place&access_token=$token",
                 false,
                 $context
             );  
@@ -62,7 +64,7 @@
                         $place_FB = $possible_places['data'][$i]['name'];
                      }
                 }
-                if($perc > 50) {
+                if($perc > 50 && isset($place_FB['likes'])) {
                     mysql_query(
                         "UPDATE tbgoogle SET
                         facebook_ID='" . $place_FB['id'] . "', 
@@ -84,7 +86,7 @@
                     $place_FB = $possible_places['data'][$i]['name'];
                  }
             }
-            if($perc > 50) {
+            if($perc > 50 && isset($place_FB['likes'])) {
                 mysql_query(
                     "UPDATE tbgoogle SET
                     facebook_ID='" . $place_FB['id'] . "', 
