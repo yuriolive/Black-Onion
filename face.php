@@ -64,8 +64,8 @@
     $lng_end = $lng + 50000/$lng_delta;
     $lat_center = $lat;
     $lng_center = $lng;
-    $lat_radio = 100/$lat_delta;
-    $lng_radio = 100/$lng_delta;
+    $lat_radio = 500/$lat_delta;
+    $lng_radio = 500/$lng_delta;
 
     $step = 0;
     $direction = 3;
@@ -77,7 +77,7 @@
         firstSearchType:
         $json = file_get_contents(
                 "https://graph.facebook.com/search?center=" . $lat . "," . $lng . 
-                "&distance=500&fields=id,name,category,category_list,about,bio,description,general_info,location,talking_about_count,were_here_count,likes,phone,cover,website&type=place&limit=1000&access_token=$token",
+                "&distance=500&fields=id,name,category,category_list,about,bio,description,general_info,location,talking_about_count,were_here_count,likes,phone,cover,website&type=place&limit=5000&access_token=$token",
                 false,
                 $context
             );  

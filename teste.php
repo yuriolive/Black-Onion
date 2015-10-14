@@ -2,34 +2,28 @@
 <head><title></title></head>
 <body>
 <?php
-    $my_connect = mysql_connect("localhost","root","");
-    if (!$my_connect) { die('Error connecting to the database: ' . mysql_error()); }
-    mysql_select_db("black_onion", $my_connect);
-    mysql_query("SET NAMES 'utf8'");
-    mysql_query('SET character_set_connection=utf8');
-    mysql_query('SET character_set_client=utf8');
-    mysql_query('SET character_set_results=utf8');
-    mb_internal_encoding("UTF-8");
-    $context = stream_context_create(array('http' => array('header'=>'Connection: close\r\n')));
     
-    $token = "CAAXKYloWZBSMBAJTFxoCZAfRVKtnBKDYOSZCjip0RoPKdrZBbALDGSpYRqHSNSYS7p4yKbU7oTop9TpJ90CrgB0lfy6koKKgVZAXemiykpK6i2BFG09lS5Yfm9lCZAPibXR72M0XLZC52JZA8DeF0xdeLL5WZAq7XE0zr8gzMeWKnmZBk3BYX63cLM";
-    $json = file_get_contents(
-        "https://graph.facebook.com/search?type=placetopic&topic_filter=all&fields=id,name,parent_ids&limit=2000" .
-        "&access_token=$token",
-        false,
-        $context
-    );
+    {
+   "1111":"Movie Theater",
+   "1202":"Musician/Band",
+   "1208":"Concert Tour",
+   "1209":"Concert Venue",
+   "1210":"Radio Station",
+   "1211":"Record Label",
+   "1212":"Music Award",
+   "1213":"Music Chart",
+   "1404":"TV Channel",
+   "1601":"Artist",
+   "1610":"Comedian",
+   "1611":"Entertainer",
+   "1614":"Dancer",
+   "1900":"Restaurant/Cafe",
+   "2100":"Bar",
+   "2101":"Club",
+   "2252":"Food/Beverages",
+   "2500":"Local Business",
+   "2508":"Arts/Entertainment/Nightlife",
+}
 
-    $subcategories = json_decode($json, true);
-
-    foreach ($subcategories['data'] as $subcategory) {
-        mysql_query("INSERT INTO tbsubcategoriafb (id, name) VALUES (" .
-            $subcategory['id'] . ",'" .
-            $subcategory['name'] . "'" .
-            ");"
-        );
-    }
-
-    mysql_close();
 ?>
 </body>

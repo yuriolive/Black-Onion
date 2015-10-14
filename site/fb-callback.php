@@ -1,7 +1,11 @@
 <?php
+session_start();
+include "fb-config.php";
+require_once __DIR__ . '/facebook-php-sdk-v4-5.0-dev/src/Facebook/autoload.php';
+
 $fb = new Facebook\Facebook([  
-  'app_id' => '1629898650614051',  
-  'app_secret' => '6968e432fd1e8753708d37b33f65e101',  
+  'app_id' => $config['app_id'],  
+  'app_secret' => $config['app_secret'],  
   'default_graph_version' => 'v2.4',  
   ]);  
   
@@ -69,5 +73,18 @@ $_SESSION['fb_access_token'] = (string) $accessToken;
 // You can redirect them to a members-only page.  
 // header('Location: https://example.com/members.php');
 
+echo '<h3>Location</h3>'; 
+if(!isset($_COOKIE['location'])) {
+  echo "Cookie named location is not set!";
+} else {
+  echo "Cookie location is set!<br>";
+  echo "Value is: " . $_COOKIE['location'];
+}
 
+  #abaixo, criamos uma variavel que terá como conteúdo o endereço para onde haverá o redirecionamento:  
+  $redirect = "/search";
+
+  #abaixo, chamamos a função header() com o atributo location: apontando para a variavel $redirect, que por 
+  #sua vez aponta para o endereço de onde ocorrerá o redirecionamento
+  header("location:$redirect");
 ?>
