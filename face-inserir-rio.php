@@ -16,7 +16,8 @@
     
    // $token = "CAAXKYloWZBSMBAFVPMITJrZAUoIgsuVL6jw0lSStiNg56XDWeSCc7TG7Wyfudc5apdOvjPrGwsHlbCLgvIIZC07OBWwRZBNbl1TmYTjb5ZBaBbWkOtvYGln7TPZCBqrCkZA41ZA3KtnKFzBowWc3nUsCeheIAWZAu9cY6ZAEMWF2QaQuoTKcf8v28MJm7m1jZB2iOrlWNa0ZCaSSNlHI1INTuZCbEuuJWkQj0W1kZD";
 
-    $token = "1442569536057818|vcQg1Yb9r2EBMKbwS1OBShi0_rM";
+    //$token = "1442569536057818|vcQg1Yb9r2EBMKbwS1OBShi0_rM";
+    $token = "CAAXKYloWZBSMBANrSpDZCItmslMZBKISAwXH2Br2c9VMzPXZA65KN6ekZAsFWuHuUETs4R2scPSYnV66EeePp6r9p8WZAT65mOfbJ8HcRGZBaZA9ZCFewnKZCZA90bWQT2q9YCefvGYFn1RgHroyJCHoFvyiIECPiFpF9U5Mp02GftCO9TMQahn9qwkK7VHnb5e478ZD";
 
     $my_connect = mysql_connect("localhost","root","");
     if (!$my_connect) { die('Error connecting to the database: ' . mysql_error()); }
@@ -98,13 +99,14 @@
         $possible_places = json_decode($json, true);
 
         foreach ($possible_places['data'] as $possible_place) {
-            if($possible_place['category'] == "Local business" || $possible_place['category'] == "Company") {
+            $category = ucfirst(strtolower($possible_place['category']));
+            if($category == "Local business" || $category == "Company") {
                 foreach ($possible_place['category_list']  as $place_category) {
                     if(in_array($place_category['id'], $subcategorias)) {
                         mysql_query("INSERT INTO tbpagefb VALUES ('" .
                             $possible_place['id'] . "','" .
                             $possible_place['name'] . "','" .
-                            $possible_place['category'] . "','" .
+                            $category . "','" .
                             $possible_place['were_here_count'] . "','" .
                             $possible_place['likes'] . "','" .
                             $possible_place['location']['latitude'] . "','" .
@@ -117,11 +119,11 @@
                         break;
                     }
                 }
-            } else if(in_array($possible_place['category'], $categorias)) {
+            } else if(in_array($category, $categorias)) {
                 mysql_query("INSERT INTO tbpagefb VALUES ('" .
                     $possible_place['id'] . "','" .
                     $possible_place['name'] . "','" .
-                    $possible_place['category'] . "','" .
+                    $category . "','" .
                     $possible_place['were_here_count'] . "','" .
                     $possible_place['likes'] . "','" .
                     $possible_place['location']['latitude'] . "','" .
