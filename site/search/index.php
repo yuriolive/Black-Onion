@@ -256,7 +256,7 @@ function get_nearest_timezone($cur_lat, $cur_long, $country_code = '') {
             max-width: 1200px;
         }
         .title-list-events {
-            color: white;
+            color: #949494;
             font-weight: 300;
             font-size: 30px;
             margin: 20px;
