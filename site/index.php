@@ -1,5 +1,16 @@
 <?php
 session_start();
+
+if(isset($_SESSION['fb_access_token'])) {
+	#abaixo, criamos uma variavel que terá como conteúdo o endereço para onde haverá o redirecionamento:  
+	$redirect = "/search";
+
+	#abaixo, chamamos a função header() com o atributo location: apontando para a variavel $redirect, que por 
+	#sua vez aponta para o endereço de onde ocorrerá o redirecionamento
+	header("location:$redirect");
+}
+
+
 require_once __DIR__ . '/facebook-php-sdk-v4-5.0-dev/src/Facebook/autoload.php';
 
 $fb = new Facebook\Facebook([
@@ -10,9 +21,9 @@ $fb = new Facebook\Facebook([
 
 $helper = $fb->getRedirectLoginHelper();
 
-$permissions = ['email', 'user_events', 'user_likes', 'user_actions.music', 'rsvp_event']; // Optional permissions
+$permissions = ['email', 'user_events', 'user_tagged_places', 'user_likes', 'user_actions.music', 'rsvp_event', 'user_relationship_details', 'user_friends']; // Optional permissions
 
-$loginUrl = $helper->getLoginUrl('http://52.11.55.27/fb-callback.php', $permissions);
+$loginUrl = $helper->getLoginUrl('http://blackonionapp.xyz/fb-callback.php', $permissions);
 
 ?>
 
@@ -83,10 +94,31 @@ $loginUrl = $helper->getLoginUrl('http://52.11.55.27/fb-callback.php', $permissi
 			color: white;
 			font-weight: 600;
 		}
+		#start-head-login {
+			visibility: hidden;
+		}
+		#start-loading {
+			color: white;
+			text-align: center;
+		}
+		.glyphicon-refresh-animate {
+		    -animation: spin .7s infinite linear;
+		    -webkit-animation: spin2 .7s infinite linear;
+		}
+
+		@-webkit-keyframes spin2 {
+		    from { -webkit-transform: rotate(0deg);}
+		    to { -webkit-transform: rotate(360deg);}
+		}
+
+		@keyframes spin {
+		    from { transform: scale(1) rotate(0deg);}
+		    to { transform: scale(1) rotate(360deg);}
+		}
 	</style>
 
 
-	<script type="text/javascript">	
+	<script type="text/javascript">
 		function showLocation(position) {
 			writeCookie('location', position.coords.latitude + "|" + position.coords.longitude + "|" + position.coords.heading, 1);
 		}
@@ -97,15 +129,23 @@ $loginUrl = $helper->getLoginUrl('http://52.11.55.27/fb-callback.php', $permissi
 			});
 		}
 
-		if(navigator.geolocation){
-			// timeout at 60000 milliseconds (60 seconds)
-			var options = {timeout:60000};
-			navigator.geolocation.getCurrentPosition(showLocation, errorHandler, options);
-		} else {
-			$.getJSON("http://ip-api.com/json", function(result) {
+		$.getJSON("http://ip-api.com/json", function(result) {
+			if(result.city != 'Campinas' && result.city != 'São Paulo' && result.city != 'Rio de Janeiro' && result.city != 'Piracicaba') {
+				alert("City not supported! Showing events from Sao Paulo!");
+				writeCookie('location', '-23.562814' + "|" + '-46.6876223', 1);
+			} else {
 				writeCookie('location', result.lat + "|" + result.lon, 1);
+				if(navigator.geolocation){
+					// timeout at 60000 milliseconds (60 seconds)
+					var options = {timeout:60000};
+					navigator.geolocation.getCurrentPosition(showLocation, errorHandler, options);
+				}
+			}
+			$(document).ready(function() {
+				$("#start-loading").hide();
+				$('#start-head-login').css('visibility', 'visible');
 			});
-		}
+		});
 
 		function writeCookie(name,value,days) {
 			var date, expires;
@@ -130,6 +170,9 @@ $loginUrl = $helper->getLoginUrl('http://52.11.55.27/fb-callback.php', $permissi
 			<div class="container-fluid" id="start-head-text">
 				<p class="text-center" id="head-first-text">FIQUE POR DENTRO DOS</p>
 				<p class="text-center" id="head-second-text">MELHORES ROLES</p>
+			</div>
+			<div class="container-fluid" id="start-loading">
+				<span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span>
 			</div>
 			<div class="container-fluid" id="start-head-login">
 				<p class="text-center"><?php echo '<a href="' . htmlspecialchars($loginUrl) . '" id="login-facebook">Log in with <span style="font-weight: 800">Facebook</span>!</a>'; ?></p>

@@ -142,8 +142,8 @@ function get_nearest_timezone($cur_lat, $cur_long, $country_code = '') {
 
         $query_pages = substr($query_pages, 0, -1);
         /** TODO Pegar timezone automaticamente **/
-        $fburl = "https://graph.facebook.com/events?ids=" . $query_pages . "&since=" . ($time - 60*60) . "&until=" . date("Y-m-d", $time) . "T24:00:00-0300" .
-            "&fields=cover,name,place,start_time,owner&access_token=$fbtoken";
+        $fburl = "https://graph.facebook.com/events?ids=" . $query_pages . "&since=" . ($time - 60*60*4) . "&until=" . date("Y-m-d", $time) . "T24:00:00-0300" .
+            "&fields=cover,name,place,start_time,owner&access_token=$fbtoken"; /* Toh pegando até quatro horas depois o evento */
 
         /*
         Debug Porpouse 
@@ -151,15 +151,24 @@ function get_nearest_timezone($cur_lat, $cur_long, $country_code = '') {
         "&fields=cover,name,place,start_time,owner&access_token=$fbtoken";*/
 
         $json_events = file_get_contents($fburl, false, $context);
-        $places_events = json_decode($json_events, true);
 
+        if($json_events === FALSE) {
+            #abaixo, criamos uma variavel que terá como conteúdo o endereço para onde haverá o redirecionamento:  
+            $redirect = "../index.php";
+
+            #abaixo, chamamos a função header() com o atributo location: apontando para a variavel $redirect, que por 
+            #sua vez aponta para o endereço de onde ocorrerá o redirecionamento
+            header("location:$redirect");
+        }
+
+        $places_events = json_decode($json_events, true);
+        // Limitar 1 evento na mesma data de um mesmo local
         foreach ($places_events as $place_events) {
             foreach ($place_events['data'] as $place_event) {
                 if(!in_array($place_event['id'], $idEvents)) {
                     array_push($events, $place_event);
                     array_push($idEvents, $place_event['id']);
                     $number_events++;
-                    break;
                 }
             }
         }
@@ -242,11 +251,20 @@ function get_nearest_timezone($cur_lat, $cur_long, $country_code = '') {
             margin-left: 100px !important;
             font-weight: 400;
             font-size: 20px;
-            background-color: #12FFD4;
             padding-left: 15px;
             padding-right: 15px;
             padding-top: 5px;
             padding-bottom: 5px;
+            cursor: pointer;
+            /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#12ffd4+0,12ffd4+0,14bafc+100 */
+            background: #12ffd4; /* Old browsers */
+            background: -moz-linear-gradient(top,  #12ffd4 0%, #12ffd4 0%, #14bafc 100%); /* FF3.6+ */
+            background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#12ffd4), color-stop(0%,#12ffd4), color-stop(100%,#14bafc)); /* Chrome,Safari4+ */
+            background: -webkit-linear-gradient(top,  #12ffd4 0%,#12ffd4 0%,#14bafc 100%); /* Chrome10+,Safari5.1+ */
+            background: -o-linear-gradient(top,  #12ffd4 0%,#12ffd4 0%,#14bafc 100%); /* Opera 11.10+ */
+            background: -ms-linear-gradient(top,  #12ffd4 0%,#12ffd4 0%,#14bafc 100%); /* IE10+ */
+            background: linear-gradient(to bottom,  #12ffd4 0%,#12ffd4 0%,#14bafc 100%); /* W3C */
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#12ffd4', endColorstr='#14bafc',GradientType=0 ); /* IE6-9 */
         }
         #list-events {
             padding: 20%;
@@ -267,6 +285,15 @@ function get_nearest_timezone($cur_lat, $cur_long, $country_code = '') {
             max-height:300px
         }
     </style>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('.navbar-header').click(function() {
+                $(location).attr('href','/');
+            });
+        });
+
+    </script>
 
 	<body>
 
