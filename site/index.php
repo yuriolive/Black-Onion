@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-if(isset($_SESSION['fb_access_token'])) {
+if(!isset($_SESSION['fb_access_token'])) {
 	#abaixo, criamos uma variavel que terá como conteúdo o endereço para onde haverá o redirecionamento:  
 	$redirect = "/search";
 
