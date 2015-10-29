@@ -10,16 +10,17 @@ include "../timezone.php";
                distance -> maximum distance in unit of latitude or longitude for accept the event
    return: array of ids from recommended events
 */
-function short_term($lat, $lng, $events, $num, $time = NULL, $distance = 0.1) {
+function short_term($lat, $lng, &$events, $num, $time = NULL, $distance = 0.1) {
     if(!isset($time)) $time = time() + 3600 * 24 * 7;
     $cont = 0;
     $recommendation = array();
-    foreach($events as $event) {
+    foreach($events as $key => $event) {
         if($cont == $num) break;
         $event_time = strtotime($event['time']);
         if($event_time < $time and abs($event['lat'] - $lat) < $distance and  abs($event['lng'] - $lng) < $distance) {
           $recommendation[$event_time] = $event['id'];
         }
+        unset($event[$key]);
     }
     ksort($recommendation);
     return $recommendation;
@@ -63,12 +64,13 @@ function long_term($user_id, $lat, $lng, $events, $num, $my_connect) {
     }
   }
   
-  if(count($recommendation) < $num) {
+  $recommendation = array_unique($recommendation);
+  while (count($recommendation) < $num) {
       $time = time() * 3600 * 24 * 30;
       $recommendation2 = short_term($user_id, $lat, $lng, $events, $num - count(), $time, 0.5);
       $recommendation = array_merge($recommendation, $recommendation2);
+      $recommendation = array_unique($recommendation);
   }
-  $recommendation = array_unique($recommendation);
   
   return $recommendation;
 }
@@ -93,7 +95,7 @@ function get_recommendation($user_id, $lat, $lng, $type, $num = 20) {
   mysql_query('SET character_set_results=utf8');
   mb_internal_encoding("UTF-8");
 
-  $query_db = "SELECT id FROM tbevents ORDER BY attending_count DESC, likes DESC;";
+  $query_db = "SELECT id,start_time,place FROM tbevents ORDER BY attending_count DESC, likes DESC;";
   $events_res = mysql_query($query_db, $my_connect);
   if($events_res === FALSE) { die(mysql_error()); }
 
@@ -113,7 +115,7 @@ function get_recommendation($user_id, $lat, $lng, $type, $num = 20) {
     $events[$i]['id'] = $events_row['id'];
     $events[$i]['lat'] = $pages[$events_row['place']]['lat'];
     $events[$i]['lng'] = $pages[$events_row['place']]['lng'];
-    $events[$i]['time'] = $events_row['time'];
+    $events[$i]['time'] = $events_row['start_time'];
   }
 
   date_default_timezone_set(get_nearest_timezone($lat, $lng, 'BR'));
