@@ -95,7 +95,7 @@ function get_recommendation($user_id, $lat, $lng, $type, $num = 20) {
   mysql_query('SET character_set_results=utf8');
   mb_internal_encoding("UTF-8");
 
-  $query_db = "SELECT id,start_time,place FROM tbevents ORDER BY attending_count DESC, likes DESC;";
+  $query_db = "SELECT id,start_time,place FROM tbevents ORDER BY attending_count DESC;";
   $events_res = mysql_query($query_db, $my_connect);
   if($events_res === FALSE) { die(mysql_error()); }
 
