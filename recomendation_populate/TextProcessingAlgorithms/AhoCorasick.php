@@ -187,10 +187,10 @@ class AhoCorasick {
     {
         if (is_array($found) || is_object($found)) {
             $word = $found['keyword'];
-            return array($pos - mb_strlen($word, $encoding) + 1, $found, "teste");
+            return array($pos - mb_strlen($word, $encoding) + 1, $found);
         } else {
             $word = $found;
-            return array($pos - mb_strlen($word, $encoding) + 1, $found, "teste");
+            return array($pos - mb_strlen($word, $encoding) + 1, $found);
         }        
     }
 
