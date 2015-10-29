@@ -1,48 +1,6 @@
-<?php 
-function get_nearest_timezone($cur_lat, $cur_long, $country_code = '') {
-    $timezone_ids = ($country_code) ? DateTimeZone::listIdentifiers(DateTimeZone::PER_COUNTRY, $country_code)
-                                    : DateTimeZone::listIdentifiers();
-
-    if($timezone_ids && is_array($timezone_ids) && isset($timezone_ids[0])) {
-
-        $time_zone = '';
-        $tz_distance = 0;
-
-        //only one identifier?
-        if (count($timezone_ids) == 1) {
-            $time_zone = $timezone_ids[0];
-        } else {
-
-            foreach($timezone_ids as $timezone_id) {
-                $timezone = new DateTimeZone($timezone_id);
-                $location = $timezone->getLocation();
-                $tz_lat   = $location['latitude'];
-                $tz_long  = $location['longitude'];
-
-                $theta    = $cur_long - $tz_long;
-                $distance = (sin(deg2rad($cur_lat)) * sin(deg2rad($tz_lat))) 
-                + (cos(deg2rad($cur_lat)) * cos(deg2rad($tz_lat)) * cos(deg2rad($theta)));
-                $distance = acos($distance);
-                $distance = abs(rad2deg($distance));
-                // echo '<br />'.$timezone_id.' '.$distance; 
-
-                if (!$time_zone || $tz_distance > $distance) {
-                    $time_zone   = $timezone_id;
-                    $tz_distance = $distance;
-                } 
-
-            }
-        }
-        return  $time_zone;
-    }
-    return 'unknown';
-}
-
-?>
-
-
 <?php
-session_start();
+include "../timezone.php";
+
 include "site/fb-config.php";
 require_once __DIR__ . '/facebook-php-sdk-v4-5.0-dev/src/Facebook/autoload.php';
 
@@ -52,33 +10,7 @@ $fb = new Facebook\Facebook([
   'default_graph_version' => 'v2.4',  
   ]);  
 
-$helper = $fb->getRedirectLoginHelper();  
-  
-try {  
-  $token = $helper->getAccessToken(); 
-} catch(Facebook\Exceptions\FacebookResponseException $e) {  
-  // When Graph returns an error  
-  echo 'Graph returned an error: ' . $e->getMessage();  
-  exit;  
-} catch(Facebook\Exceptions\FacebookSDKException $e) {  
-  // When validation fails or other local issues  
-  echo 'Facebook SDK returned an error: ' . $e->getMessage();  
-  exit;  
-}  
-
-if (!isset($token)) {  
-  if ($helper->getError()) {  
-    header('HTTP/1.0 401 Unauthorized');  
-    echo "Error: " . $helper->getError() . "\n";
-    echo "Error Code: " . $helper->getErrorCode() . "\n";
-    echo "Error Reason: " . $helper->getErrorReason() . "\n";
-    echo "Error Description: " . $helper->getErrorDescription() . "\n";
-  } else {  
-    header('HTTP/1.0 400 Bad Request');  
-    echo 'Bad request';  
-  }  
-  exit;  
-}  
+$token = "";
 
 $logFile = fopen("tbface_event.log", "w");
 
@@ -134,7 +66,8 @@ while(count($pages) > 0) {
     }
 
     /** TODO Pegar timezone automaticamente **/
-    $fburl = "https://graph.facebook.com/events?ids=" . $query_pages . "&since=" . ($time - 60*60) . "&until=" . date("Y-m-d", $time) . "T24:00:00-0300" .
+    $fburl = "https://graph.facebook.com/events?ids=" . $query_pages .
+        "&since=" . ($time - 60*60) .
         "&fields=id,likes,attending_count,ticket_uri,timezone,description,cover,name,id_host,start_time,end_time&access_token=$token";
 
     $json_events = file_get_contents($fburl, false, $context);
@@ -142,19 +75,19 @@ while(count($pages) > 0) {
     if($json_events === FALSE) {
         fwrite($logFile, "************************\n");
         fwrite($logFile, "ERROR\n");
-        fwrite($logFile, "Current place:\n");
+        fwrite($logFile, "Current place:$query_pages \n");
         fwrite($logFile, "************************\n");
         sleep(10);
         /* tenta de novo pelo menos uma vez */
         $second_try = !$second_try;
-        continue;
+        if($second_try) continue;
     }
     if($second_try) $second_try = false;
 
     do {
         $places_events = json_decode($json_events, true);
 
-        foreach ($places_events as $place_events => $place_id) {
+        foreach ($places_events as $place_id => $place_events) {
             foreach ($place_events['data'] as $place_event) {
                 if(!in_array($place_event['id'], $idEvents)) {
                     mysql_query("INSERT INTO tbevents VALUES ('" .
@@ -177,17 +110,17 @@ while(count($pages) > 0) {
             }
         }
 
-        if(isset($possible_places['paging']['next'])) {
+        if(isset($places_events['paging']['next'])) {
             do {
                 $json_events = file_get_contents(
-                    $possible_places['paging']['next'] . "&access_token=$token",
+                    $places_events['paging']['next'] . "&access_token=$token",
                     false,
                     $context
                 );
                 if($json_events === FALSE) {
                   fwrite($logFile, "************************\n");
                   fwrite($logFile, "ERROR\n");
-                  fwrite($logFile, "Current place: $pages[0]\n");
+                  fwrite($logFile, "Current place: $query_pages\n");
                   fwrite($logFile, "************************\n");
                   sleep(10);
                   /* tenta de novo pelo menos uma vez */
@@ -195,7 +128,7 @@ while(count($pages) > 0) {
                 }
             } while($second_try);
         } 
-    } while(isset($possible_places['paging']['next']));
+    } while(isset($places_events['paging']['next']));
 }
 
 mysql_close($my_connect);
