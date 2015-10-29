@@ -102,7 +102,13 @@ function saveToCache($tree, $filePath) {
   memUsage($memoryWhole, "Memory whole:");
   unset($ac);
   echo "<b>Results: </b><pre>";var_dump($res);echo "</pre>";
-  
+  $res_artistas = array();
+  foreach ($res as $res_artista) {
+    if(!in_array($res_artista[1]["id_fb"], $res_artistas))
+      array_push($res_artistas, $res_artista[1]["id_fb"]);
+  }
+
+  var_dump($res_artistas);
 ?>
 </body>
 </html>
