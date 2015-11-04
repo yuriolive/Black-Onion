@@ -17,8 +17,14 @@ function short_term($lat, $lng, &$events, $num, $time = NULL, $distance = 0.1) {
     foreach($events as $key => $event) {
         if($cont == $num) break;
         $event_time = strtotime($event['time']);
-        if($event_time < $time and abs($event['lat'] - $lat) < $distance and  abs($event['lng'] - $lng) < $distance) {
-          $recommendation[$event_time] = $event['id'];
+        if($event_time < $time) {
+            if(isset($lat) and isset($lng)) { 
+              if(abs($event['lat'] - $lat) < $distance and  abs($event['lng'] - $lng) < $distance) {
+                $recommendation[$event_time] = $key;
+              }
+            } else {
+              $recommendation[$event_time] = $key;
+            }
         }
         unset($event[$key]);
     }
@@ -60,16 +66,17 @@ function long_term($user_id, $lat, $lng, $events, $num, $my_connect) {
     $events_res = mysql_query($query_db, $my_connect);
     if($events_res === FALSE) { die(mysql_error()); }
     while($events_row = mysql_fetch_array($events_res)) {
-      array_push($recommendation, $events_row['id_artista']);
+      array_push($recommendation, $events_row['id_evento']);
+      unset($event[$events_row['id_evento']]);
     }
   }
   
   $recommendation = array_unique($recommendation);
-  while (count($recommendation) < $num) {
-      $time = time() * 3600 * 24 * 30;
-      $recommendation2 = short_term($user_id, $lat, $lng, $events, $num - count(), $time, 0.5);
-      $recommendation = array_merge($recommendation, $recommendation2);
-      $recommendation = array_unique($recommendation);
+  if (count($recommendation) < $num) {
+    $time = time() * 3600 * 24 * 30;
+    $recommendation2 = short_term($user_id, $lat, $lng, $events, $num - count($recommendation), $time, 0.5);
+    $recommendation = array_merge($recommendation, $recommendation2);
+    $recommendation = array_unique($recommendation);
   }
   
   return $recommendation;
@@ -105,17 +112,16 @@ function get_recommendation($user_id, $lat, $lng, $type, $num = 20) {
 
   $places = array();
   while($places_row = mysql_fetch_array($places_res)) {
-    $pages[$pages_row['id']]['lat'] = $pages_row['lat'];
-    $pages[$pages_row['id']]['lng'] = $pages_row['lng'];
+    $places[$places_row['id']]['lat'] = $places_row['lat'];
+    $places[$places_row['id']]['lng'] = $places_row['lng'];
   }
 
   $events = array();
-  $i = 0;
   while($events_row = mysql_fetch_array($events_res)) {
-    $events[$i]['id'] = $events_row['id'];
-    $events[$i]['lat'] = $pages[$events_row['place']]['lat'];
-    $events[$i]['lng'] = $pages[$events_row['place']]['lng'];
-    $events[$i]['time'] = $events_row['start_time'];
+    $id = $events_row['id'];
+    $events[$id]['lat'] = $places[$events_row['place']]['lat'];
+    $events[$id]['lng'] = $places[$events_row['place']]['lng'];
+    $events[$id]['time'] = $events_row['start_time'];
   }
 
   date_default_timezone_set(get_nearest_timezone($lat, $lng, 'BR'));
