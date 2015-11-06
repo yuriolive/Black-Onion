@@ -16,7 +16,9 @@ function short_term($lat, $lng, &$events, $num, $time = NULL, $distance = 0.1) {
     $recommendation = array();
     foreach($events as $key => $event) {
         if($cont == $num) break;
+        $event['time'] = substr($event['time'],0,-1);
         $event_time = strtotime($event['time']);
+        echo $event_time . "\n";
         if($event_time < $time) {
             if(isset($lat) and isset($lng)) { 
               if(abs($event['lat'] - $lat) < $distance and  abs($event['lng'] - $lng) < $distance) {
@@ -41,7 +43,7 @@ function short_term($lat, $lng, &$events, $num, $time = NULL, $distance = 0.1) {
                my_connect -> connection to the database
    return: array of ids from recommended events
  */
-function long_term($user_id, $lat, $lng, $events, $num, $my_connect) {
+function long_term($user_id, $lat, $lng, &$events, $num, $my_connect) {
   $artistas = array();
   $recommendation = array();
   
@@ -52,29 +54,29 @@ function long_term($user_id, $lat, $lng, $events, $num, $my_connect) {
     array_push($artistas, $artistas_row['id_artista']);
   }
   
-  $query_db = "SELECT a2.id_fb FROM tbusuario_artista ua, ARTISTA a1, ARTISTA a2, Assemelha_artista aa" 
-            . "WHERE $user_id = ua.id_usuario and ua.id_artista = a1.id_fb and a1.id_spotify = aa.id_spotify_super and aa.id_spotify_sub = a2.id_spotfy";
+  $query_db = "SELECT a2.id_fb FROM tbusuario_artista ua, artista a1, artista a2, assemelha_artista aa
+WHERE $user_id = ua.id_usuario and ua.id_artista = a1.id_fb and a1.id_spotify = aa.id_spotify_super and aa.id_spotify_sub = a2.id_spotify";
   $artistas_res = mysql_query($query_db, $my_connect);
   if($artistas_res === FALSE) { die(mysql_error()); }
   while($artistas_row = mysql_fetch_array($artistas_res)) {
-    array_push($artistas, $artistas_row['id_artista']);
+    array_push($artistas, $artistas_row['id_fb']);
   }
   $artistas = array_unique($artistas);
 
   foreach($artistas as $artista) {
-    $query_db = "SELECT id_evento FROM tbevento_artista WHERE $artista = id_artista";     
+    $query_db = "SELECT id_event FROM tbevents_artista WHERE $artista = id_fb_artista";     
     $events_res = mysql_query($query_db, $my_connect);
     if($events_res === FALSE) { die(mysql_error()); }
     while($events_row = mysql_fetch_array($events_res)) {
-      array_push($recommendation, $events_row['id_evento']);
-      unset($event[$events_row['id_evento']]);
+      array_push($recommendation, $events_row['id_event']);
+      unset($events[$events_row['id_event']]);
     }
   }
   
   $recommendation = array_unique($recommendation);
   if (count($recommendation) < $num) {
     $time = time() * 3600 * 24 * 30;
-    $recommendation2 = short_term($user_id, $lat, $lng, $events, $num - count($recommendation), $time, 0.5);
+    $recommendation2 = short_term($lat, $lng, $events, $num - count($recommendation), $time, 0.5);
     $recommendation = array_merge($recommendation, $recommendation2);
     $recommendation = array_unique($recommendation);
   }
@@ -102,7 +104,7 @@ function get_recommendation($user_id, $lat, $lng, $type, $num = 20) {
   mysql_query('SET character_set_results=utf8');
   mb_internal_encoding("UTF-8");
 
-  $query_db = "SELECT id,start_time,place FROM tbevents ORDER BY attending_count DESC;";
+  $query_db = "SELECT id_event,start_time,id_page FROM tbevents ORDER BY attending_count DESC;";
   $events_res = mysql_query($query_db, $my_connect);
   if($events_res === FALSE) { die(mysql_error()); }
 
@@ -118,16 +120,16 @@ function get_recommendation($user_id, $lat, $lng, $type, $num = 20) {
 
   $events = array();
   while($events_row = mysql_fetch_array($events_res)) {
-    $id = $events_row['id'];
-    $events[$id]['lat'] = $places[$events_row['place']]['lat'];
-    $events[$id]['lng'] = $places[$events_row['place']]['lng'];
+    $id = $events_row['id_event'];
+    $events[$id]['lat'] = $places[$events_row['id_page']]['lat'];
+    $events[$id]['lng'] = $places[$events_row['id_page']]['lng'];
     $events[$id]['time'] = $events_row['start_time'];
   }
 
   date_default_timezone_set(get_nearest_timezone($lat, $lng, 'BR'));
 
-  if($type == 1) $recommendation = short_term($user_id, $lat, $lng, $events, $num);
-  else $recommendation = long_term($user_id, $events, $num, $my_connect);
+  if($type == 1) $recommendation = short_term($lat, $lng, $events, $num);
+  else $recommendation = long_term($user_id, $lat, $lng, $events, $num, $my_connect);
   
   mysql_close($my_connect);
   return $recommendation;
