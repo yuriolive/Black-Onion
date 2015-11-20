@@ -133,7 +133,7 @@ class Recommendation_long_term_by_input extends Recommendation_short_term_by_inp
       
     $query_db = "SELECT id_fb FROM artista WHERE LOWER(nome_artista) LIKE LOWER(%".$this->input."%)" ;
     $artistas_input_res = mysql_query($query_db, $this->my_connect);
-    if($artistas_res === FALSE) { die(mysql_error()); }
+    if($artistas_input_res === FALSE) { die(mysql_error()); }
     while($artistas_row = mysql_fetch_array($artistas_input_res)) {
         array_push($this->artistas, $artistas_row['id_fb']);
     }
@@ -149,7 +149,7 @@ class Recommendation_long_term_by_input extends Recommendation_short_term_by_inp
             }
         }
     }
-    if(is_aray($this->artistas)) {
+    if(is_array($this->artistas)) {
         $this->artistas = array_unique($this->artistas);
     }
   }
