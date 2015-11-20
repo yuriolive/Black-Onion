@@ -1,5 +1,4 @@
 <?php
-include "../timezone.php";
 
 interface IRecommendation {
   function recommendation($num);
@@ -7,7 +6,6 @@ interface IRecommendation {
 
 class Recommendation_short_term implements IRecommendation {
     protected
-      $user_id,    // facebook identifier of the user
       $lat,        // current latitude of the user
       $lng,        // current longitude of the user
       $events,     // array of events to analyze (filds id,lat,lng,time)
@@ -15,60 +13,60 @@ class Recommendation_short_term implements IRecommendation {
       $prev_atten, // represent last element returned from mysql query
       $places;     // array of places
 
-  function __construct($user_id, $lat, $lng) {
-    $this->user_id = $user_id;
-    $this->lat = $lat;
-    $this->lng = $lng;
+    function __construct($lat, $lng) {
+        $this->lat = $lat;
+        $this->lng = $lng;
 
-    $my_connect = mysql_connect("localhost","root","");
-    if (!$my_connect) { die('Error connecting to the database: ' . mysql_error()); }
-    mysql_select_db("blackonion", $my_connect);
-    mysql_query("SET NAMES 'utf8'");
-    mysql_query('SET character_set_connection=utf8');
-    mysql_query('SET character_set_client=utf8');
-    mysql_query('SET character_set_results=utf8');
-    mb_internal_encoding("UTF-8");
-    date_default_timezone_set(get_nearest_timezone($lat, $lng, 'BR'));
-    reset();
-  }
+        $this->my_connect = mysql_connect("localhost","root","");
+        if (!$this->my_connect) { die('Error connecting to the database: ' . mysql_error()); }
+        mysql_select_db("blackonion", $this->my_connect);
+        mysql_query("SET NAMES 'utf8'");
+        mysql_query('SET character_set_connection=utf8');
+        mysql_query('SET character_set_client=utf8');
+        mysql_query('SET character_set_results=utf8');
+        mb_internal_encoding("UTF-8");
 
-  public function reset() {
-    $prev_atten = PHP_INT_MAX;
-    $events = array();
-    
-    $query_db = "SELECT id,lat,lng FROM tbpagefb;";
-    $places_res = mysql_query($query_db, $my_connect);
-    if($places_res === FALSE) { die(mysql_error()); }
-
-    $places = array();
-    while($places_row = mysql_fetch_array($places_res)) {
-      $places[$places_row['id']]['lat'] = $places_row['lat'];
-      $places[$places_row['id']]['lng'] = $places_row['lng'];
+        $this->reset_recommendation();
     }
-  }
+
+    public function reset_recommendation() {
+        $this->prev_atten = PHP_INT_MAX;
+        $this->events = array();
+
+        $query_db = "SELECT id,lat,lng FROM tbpagefb;";
+        $places_res = mysql_query($query_db, $this->my_connect);
+        if($places_res === FALSE) { die(mysql_error()); }
+
+        $this->places = array();
+        while($places_row = mysql_fetch_array($places_res)) {
+          $this->places[$places_row['id']]['lat'] = $places_row['lat'];
+          $this->places[$places_row['id']]['lng'] = $places_row['lng'];
+        }
+    }
 
   public function __destruct() {
-    mysql_close($my_connect);
+    mysql_close($this->my_connect);
   }
     
-  protected function cmp($a, $b) {
+  protected static function cmp($a, $b) {
     return $a['attending_count'] > $b['attending_count'];
   }
 
   public function find_events($num) {
-    $query_db = "SELECT id_event,start_time,id_page,attending_count FROM tbevents ORDER BY attending_count DESC HAVING attending_count < $prev_atten LIMIT $num;";
-    $events_res = mysql_query($query_db, $my_connect);
+    $query_db = "SELECT id_event,start_time,id_page,attending_count FROM tbevents WHERE attending_count < $this->prev_atten ORDER BY attending_count DESC  LIMIT $num;";
+    $events_res = mysql_query($query_db, $this->my_connect);
     if($events_res === FALSE) { die(mysql_error()); }
 
     while($events_row = mysql_fetch_array($events_res)) {
       $id = $events_row['id_event'];
-      $events[$id]['attending_count'] = $events_row['attending_count'];
-      $events[$id]['lat'] = $places[$events_row['id_page']]['lat'];
-      $events[$id]['lng'] = $places[$events_row['id_page']]['lng'];
-      $events[$id]['time'] = $events_row['start_time'];
+      $this->events[$id]['id'] = $id;
+      $this->events[$id]['attending_count'] = $events_row['attending_count'];
+      $this->events[$id]['lat'] = $this->places[$events_row['id_page']]['lat'];
+      $this->events[$id]['lng'] = $this->places[$events_row['id_page']]['lng'];
+      $this->events[$id]['time'] = $events_row['start_time'];
     }
-    usort($events, "cmp");
-    $prev_atten = end($events)['attending_count'];
+    usort($this->events, array('Recommendation_short_term','cmp'));
+    $this->prev_atten = end($this->events)['attending_count'];
   }
 
   /* recommend event in a short term
@@ -81,21 +79,25 @@ class Recommendation_short_term implements IRecommendation {
     if(!isset($time)) $time = time() + 3600 * 24 * 7;
     $cont = 0;
     $recommendation = array();
-    if(empty($events)) find_events($num);
-    foreach($events as $key => $event) {
-        if($cont == $num) break;
-        $event['time'] = substr($event['time'],0,-1);
-        $event_time = strtotime($event['time']);
-        if($event_time < $time) {
-            if(isset($lat) and isset($lng)) { 
-              if(abs($event['lat'] - $lat) < $distance and  abs($event['lng'] - $lng) < $distance) {
-                $recommendation[$event_time] = $key;
-              }
-            } else {
-              $recommendation[$event_time] = $key;
+    while ($cont < $num) {
+        if(empty($this->events)) $this->find_events($num);
+        if(empty($this->events)) break;
+        foreach($this->events as $key => $event) {
+            $event['time'] = substr($event['time'],0,-1);
+            $event_time = strtotime($event['time']);
+            if($event_time < $time) {
+                if(isset($lat) and isset($lng)) { 
+                  if(abs($event['lat'] - $lat) < $distance and  abs($event['lng'] - $lng) < $distance) {
+                    $recommendation[$event_time] = $event['id'];
+                    $cont++;
+                  }
+                } else {
+                  $recommendation[$event_time] = $event['id'];
+                  $cont++;
+                }
             }
+            unset($this->events[$key]);
         }
-        unset($event[$key]);
     }
     ksort($recommendation);
     return $recommendation;
@@ -104,54 +106,50 @@ class Recommendation_short_term implements IRecommendation {
 
   /*
      recommend events
-     parameters: type -> type of recommendation (1 = short term and 2 = long term)
-                 num -> required number of events
+     parameters: num -> required number of events
      return: array of next ids from recommended events
    */
   public function recommendation($num = 20) {
-
-    if($type == 1) $recommendation = short_term($num);
-    else $recommendation = long_term($num);
-
+    $recommendation = $this->short_term($num);
     return $recommendation;
   }
+
 }
 
 class Recommendation_long_term extends Recommendation_short_term {
    private
-      $artistas;
+       $user_artistas = array(),   // artists related to the user
+       $artistas = array();        // artists that the user may like
   
-  function __construct() {
-      parent::__construct();
-      find_artist();
+  function __construct($lat, $lng, $artistas) {
+      parent::__construct($lat, $lng);
+      $this->user_artistas = $artistas;
+      $this->find_artist();
   }
     
-  public function reset() {
-    parent::reset();
-    find_artist();
+  public function reset_recommendation() {
+      parent::reset_recommendation();
+      $this->find_artist();
   }
 
+  /* find artists indirectly releted with the user */
   public function find_artist() {
 
-    /* find artists directly releted with the user */
-    $artistas = array();
-    $query_db = "SELECT id_artista FROM tbusuario_artista WHERE id_usuario = $user_id;";
-    $artistas_res = mysql_query($query_db, $my_connect);
-    if($artistas_res === FALSE) { die(mysql_error()); }
-    while($artistas_row = mysql_fetch_array($artistas_res)) {
-      array_push($artistas, $artistas_row['id_artista']);
+    $this->artistas = $this->user_artistas;
+    if(is_array($this->user_artistas)) {
+        foreach($this->user_artistas as $artista) {
+            $query_db = "SELECT a2.id_fb FROM tbusuario_artista ua, artista a1, artista a2, assemelha_artista aa
+            WHERE " .  mysql_real_escape_string($artista) .  " = a1.id_fb and a1.id_spotify = aa.id_spotify_super and aa.id_spotify_sub = a2.id_spotify";
+            $artistas_res = mysql_query($query_db, $this->my_connect);
+            if($artistas_res === FALSE) { die(mysql_error()); }
+            while($artistas_row = mysql_fetch_array($artistas_res)) {
+              array_push($this->artistas, $artistas_row['id_fb']);
+            }
+        }
     }
-
-    /* find artists indirectly releted with the user */
-    $query_db = "SELECT a2.id_fb FROM tbusuario_artista ua, artista a1, artista a2, assemelha_artista aa
-    WHERE $user_id = ua.id_usuario and ua.id_artista = a1.id_fb and a1.id_spotify = aa.id_spotify_super and aa.id_spotify_sub = a2.id_spotify";
-    $artistas_res = mysql_query($query_db, $my_connect);
-    if($artistas_res === FALSE) { die(mysql_error()); }
-    while($artistas_row = mysql_fetch_array($artistas_res)) {
-      array_push($artistas, $artistas_row['id_fb']);
+    if(is_array($this->artistas)) { 
+        $this->artistas = array_unique($this->artistas);
     }
-    
-    $artistas = array_unique($artistas);
   }
 
   /* recommend event in a long term
@@ -160,26 +158,39 @@ class Recommendation_long_term extends Recommendation_short_term {
    */
   private function long_term($num) {
     $recommendation = array();
-
-    foreach($artistas as $artista) {
-      $query_db = "SELECT id_event FROM tbevents_artista WHERE $artista = id_fb_artista";     
-      $events_res = mysql_query($query_db, $my_connect);
-      if($events_res === FALSE) { die(mysql_error()); }
-      while($events_row = mysql_fetch_array($events_res)) {
-        if(isset($events[$events_row['id_event']])) {
-          array_push($recommendation, $events_row['id_event']);
-          unset($events[$events_row['id_event']]);
+    if(is_array($this->artistas)) {
+        foreach($this->artistas as $artista) {
+          $query_db = "SELECT id_event FROM tbevents_artista WHERE $artista = id_fb_artista";     
+          $events_res = mysql_query($query_db, $this->my_connect);
+          if($events_res === FALSE) { die(mysql_error()); }
+          while($events_row = mysql_fetch_array($events_res)) {
+            if(isset($this->events[$events_row['id_event']])) {
+              array_push($recommendation, $events_row['id_event']);
+              unset($this->events[$events_row['id_event']]);
+            }
+          }
         }
-      }
-    }
-
-    if (count($recommendation) < $num) {
-      $time = time() * 3600 * 24 * 30;
-      $recommendation2 = short_term($num - count($recommendation), $time, 0.5);
-      $recommendation = array_merge($recommendation, $recommendation2);
     }
 
     return $recommendation;
   }
+
+  /*
+     recommend events
+     parameters: num -> required number of events
+     return: array of next ids from recommended events
+   */
+  public function recommendation($num = 20) {
+    // use long term recommendation
+    $recommendation = $this->long_term($num);
+    // complemented with short term recommendation
+    // if (count($recommendation) < $num) {
+    //   $time = time() * 3600 * 24 * 30;
+    //   $recommendation2 = $this->short_term($num - count($recommendation), $time, 0.5);
+    //   $recommendation = array_merge($recommendation, $recommendation2);
+    // }
+    return $recommendation;
+  }
+
 }
 ?>
