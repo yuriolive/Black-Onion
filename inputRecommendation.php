@@ -131,7 +131,7 @@ class Recommendation_long_term_by_input extends Recommendation_short_term_by_inp
   /* find artists indirectly releted with the user */
   public function find_artist() {
       
-    $query_db = "SELECT id_fb FROM artista WHERE LOWER(nome_artista) LIKE LOWER(%".$this->input."%)" ;
+    $query_db = "SELECT id_fb FROM artista WHERE LOWER(nome_artista) LIKE LOWER('%".$this->input."%')" ;
     $artistas_input_res = mysql_query($query_db, $this->my_connect);
     if($artistas_input_res === FALSE) { die(mysql_error()); }
     while($artistas_row = mysql_fetch_array($artistas_input_res)) {
