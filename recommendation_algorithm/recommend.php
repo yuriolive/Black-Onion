@@ -44,75 +44,73 @@ class Recommendation_short_term implements IRecommendation {
         }
     }
 
-  public function __destruct() {
-    mysql_close($this->my_connect);
-  }
-    
-  protected static function cmp($a, $b) {
-    return $a['attending_count'] > $b['attending_count'];
-  }
-
-  public function find_events($num) {
-    $query_db = "SELECT id_event,start_time,id_page,attending_count FROM tbevents WHERE attending_count < $this->prev_atten ORDER BY attending_count DESC  LIMIT $num;";
-    $events_res = mysql_query($query_db, $this->my_connect);
-    if($events_res === FALSE) { die(mysql_error()); }
-
-    while($events_row = mysql_fetch_array($events_res)) {
-      $id = $events_row['id_event'];
-      $this->events[$id]['id'] = $id;
-      $this->events[$id]['attending_count'] = $events_row['attending_count'];
-      $this->events[$id]['lat'] = $this->places[$events_row['id_page']]['lat'];
-      $this->events[$id]['lng'] = $this->places[$events_row['id_page']]['lng'];
-      $this->events[$id]['time'] = $events_row['start_time'];
+    public function destruct() {
+      mysql_close($this->my_connect);
     }
-    usort($this->events, array('Recommendation_short_term','cmp'));
-    $this->prev_atten = end($this->events)['attending_count'];
-  }
 
-  /* recommend event in a short term
-     parameters: num -> required number of events
-                 time -> maximum time in seconds for accept the event
-                 distance -> maximum distance in unit of latitude or longitude for accept the event
-     return: array of ids from recommended events
-  */
-  protected function short_term($num, $time = NULL, $distance = 0.1) {
-    if(!isset($time)) $time = time() + 3600 * 24 * 7;
-    $cont = 0;
-    $recommendation = array();
-    while ($cont < $num) {
-        if(empty($this->events)) $this->find_events($num);
-        if(empty($this->events)) break;
-        foreach($this->events as $key => $event) {
-            $event['time'] = substr($event['time'],0,-1);
-            $event_time = strtotime($event['time']);
-            if($event_time < $time) {
-                if(isset($lat) and isset($lng)) { 
-                  if(abs($event['lat'] - $lat) < $distance and  abs($event['lng'] - $lng) < $distance) {
+    protected static function cmp($a, $b) {
+      return $a['attending_count'] < $b['attending_count'];
+    }
+
+    public function find_events($num) {
+      $query_db = "SELECT id_event,start_time,id_page,attending_count FROM tbevents WHERE attending_count < $this->prev_atten ORDER BY attending_count DESC  LIMIT $num;";
+      $events_res = mysql_query($query_db, $this->my_connect);
+      if($events_res === FALSE) { die(mysql_error()); }
+
+      while($events_row = mysql_fetch_array($events_res)) {
+        $id = $events_row['id_event'];
+        $this->events[$id]['id'] = $id;
+        $this->events[$id]['attending_count'] = $events_row['attending_count'];
+        $this->events[$id]['lat'] = $this->places[$events_row['id_page']]['lat'];
+        $this->events[$id]['lng'] = $this->places[$events_row['id_page']]['lng'];
+        $this->events[$id]['time'] = $events_row['start_time'];
+      }
+      usort($this->events, array('Recommendation_short_term','cmp'));
+      $this->prev_atten = end($this->events)['attending_count'];
+    }
+
+    /* recommend event in a short term
+       parameters: num -> required number of events
+                   time -> maximum time in seconds for accept the event
+                   distance -> maximum distance in unit of latitude or longitude for accept the event
+       return: array of ids from recommended events
+    */
+    protected function short_term($num, $time = NULL, $distance = 0.1) {
+      if(!isset($time)) $time = time() + 3600 * 24 * 7;
+      $recommendation = array();
+      while (count($recommendation) < $num) {
+          if(empty($this->events)) $this->find_events($num);
+          if(empty($this->events)) break;
+          foreach($this->events as $key => $event) {
+              if(count($recommendation) >= $num) break;
+              $event['time'] = substr($event['time'],0,-1);
+              $event_time = strtotime($event['time']);
+              if($event_time < $time) {
+                  if(isset($lat) and isset($lng)) { 
+                    if(abs($event['lat'] - $lat) < $distance and  abs($event['lng'] - $lng) < $distance) {
+                      $recommendation[$event_time] = $event['id'];
+                    }
+                  } else {
                     $recommendation[$event_time] = $event['id'];
-                    $cont++;
                   }
-                } else {
-                  $recommendation[$event_time] = $event['id'];
-                  $cont++;
-                }
-            }
-            unset($this->events[$key]);
-        }
+              }
+              unset($this->events[$key]);
+          }
+      }
+      ksort($recommendation);
+      return $recommendation;
     }
-    ksort($recommendation);
-    return $recommendation;
-  }
 
 
-  /*
-     recommend events
-     parameters: num -> required number of events
-     return: array of next ids from recommended events
-   */
-  public function recommendation($num = 20) {
-    $recommendation = $this->short_term($num);
-    return $recommendation;
-  }
+    /*
+       recommend events
+       parameters: num -> required number of events
+       return: array of next ids from recommended events
+     */
+    public function recommendation($num = 20) {
+      $recommendation = $this->short_term($num);
+      return $recommendation;
+    }
 
 }
 
@@ -159,16 +157,15 @@ class Recommendation_long_term extends Recommendation_short_term {
   private function long_term($num) {
     $recommendation = array();
     if(is_array($this->artistas)) {
-        foreach($this->artistas as $artista) {
+        foreach($this->artistas as $key => $artista) {
+          if(count($recommendation) > $num ) break;
           $query_db = "SELECT id_event FROM tbevents_artista WHERE $artista = id_fb_artista";     
           $events_res = mysql_query($query_db, $this->my_connect);
           if($events_res === FALSE) { die(mysql_error()); }
           while($events_row = mysql_fetch_array($events_res)) {
-            if(isset($this->events[$events_row['id_event']])) {
-              array_push($recommendation, $events_row['id_event']);
-              unset($this->events[$events_row['id_event']]);
-            }
+            array_push($recommendation, $events_row['id_event']);
           }
+          unset($this->artistas[$key]);
         }
     }
 
