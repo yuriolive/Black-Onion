@@ -140,6 +140,7 @@ class Recommendation_long_term_by_input extends Recommendation_short_term_by_inp
 
     if(is_array($this->artistas)) { 
         $this->artistas = array_unique($this->artistas);
+        $this->artistas = array_filter($this->artistas, 'strlen')
         foreach($this->artistas as $artista) {
             $query_db = "SELECT a2.id_fb FROM artista a1, artista a2, assemelha_artista aa WHERE " .mysql_real_escape_string($artista). " = a1.id_fb AND a1.id_spotify = aa.id_spotify_super and aa.id_spotify_sub = a2.id_spotify";
             $artistas_res = mysql_query($query_db, $this->my_connect);
