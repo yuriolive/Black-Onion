@@ -120,19 +120,19 @@ class Recommendation_long_term_by_input extends Recommendation_short_term_by_inp
   function __construct($lat, $lng, $input) {
       parent::__construct($lat, $lng);      
       $this->input = $input;
-      $this->find_artist($input);
       var_dump($input);
+      $this->find_artist();
   }
     
-  public function reset_recommendation() {
-      parent::reset_recommendation();
-      $this->find_artist(NULL);
-  }
+    /*public function reset_recommendation() {
+      parent::reset_recommendation();        
+      $this->find_artist();
+      }*/
 
   /* find artists indirectly releted with the user */
-    public function find_artist ($input) {
-     var_dump( $input);        
-    $query_db = "SELECT id_fb FROM artista WHERE LOWER(nome_artista) LIKE LOWER('%".$this->input."%')" ;
+    public function find_artist () {
+    $query_db = "SELECT id_fb FROM artista WHERE artista.id_fb IS NOT NULL AND LOWER(nome_artista) LIKE LOWER('%".$this->input."%')" ;
+
     $artistas_input_res = mysql_query($query_db, $this->my_connect);
     if($artistas_input_res === FALSE) { die(mysql_error()); }
     while($artistas_row = mysql_fetch_array($artistas_input_res)) {
@@ -141,12 +141,10 @@ class Recommendation_long_term_by_input extends Recommendation_short_term_by_inp
     
     if(is_array($this->artistas)) { 
         $this->artistas = array_unique($this->artistas);
-        $this->artistas = array_filter($this->artistas, 'strlen');
        
-        
+        var_dump($this->artistas);
         foreach($this->artistas as $artista) {
             $query_db = "SELECT a2.id_fb FROM artista a1, artista a2, assemelha_artista aa WHERE " .mysql_real_escape_string($artista). " = a1.id_fb AND a1.id_spotify = aa.id_spotify_super and aa.id_spotify_sub = a2.id_spotify";
-            //echo "SELECT a2.id_fb FROM artista a1, artista a2, assemelha_artista aa WHERE " .mysql_real_escape_string($artista). " = a1.id_fb AND a1.id_spotify = aa.id_spotify_super and aa.id_spotify_sub = a2.id_spotify";
             $artistas_res = mysql_query($query_db, $this->my_connect);
             if($artistas_res === FALSE) { die(mysql_error()); }
             while($artistas_row = mysql_fetch_array($artistas_res)) {
@@ -175,7 +173,7 @@ class Recommendation_long_term_by_input extends Recommendation_short_term_by_inp
             }
           }
         }
-
+    var_dump($recommendation);
     return $recommendation;
   }
 
