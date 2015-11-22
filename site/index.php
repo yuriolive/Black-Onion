@@ -1,14 +1,6 @@
 <?php
 session_start();
 
-if(!isset($_SESSION['fb_access_token'])) {
-	#abaixo, criamos uma variavel que terá como conteúdo o endereço para onde haverá o redirecionamento:  
-	$redirect = "/search";
-
-	#abaixo, chamamos a função header() com o atributo location: apontando para a variavel $redirect, que por 
-	#sua vez aponta para o endereço de onde ocorrerá o redirecionamento
-	header("location:$redirect");
-}
 
 
 require_once __DIR__ . '/facebook-php-sdk-v4-5.0-dev/src/Facebook/autoload.php';

@@ -15,7 +15,7 @@ class Recommendation_short_term_by_input {
 
         $this->my_connect = mysql_connect("localhost","root","");
         if (!$this->my_connect) { die('Error connecting to the database: ' . mysql_error()); }
-        mysql_select_db("black_onion", $this->my_connect);
+        mysql_select_db("blackonion", $this->my_connect);
         mysql_query("SET NAMES 'utf8'");
         mysql_query('SET character_set_connection=utf8');
         mysql_query('SET character_set_client=utf8');
@@ -120,6 +120,7 @@ class Recommendation_long_term_by_input extends Recommendation_short_term_by_inp
   function __construct($lat, $lng, $input) {
       parent::__construct($lat, $lng);      
       $this->input = $input;
+      var_dump($input);
       $this->find_artist();
   }
     
@@ -131,6 +132,7 @@ class Recommendation_long_term_by_input extends Recommendation_short_term_by_inp
   /* find artists indirectly releted with the user */
     public function find_artist () {
     $query_db = "SELECT id_fb FROM artista WHERE artista.id_fb IS NOT NULL AND LOWER(nome_artista) LIKE LOWER('%".$this->input."%')" ;
+
     $artistas_input_res = mysql_query($query_db, $this->my_connect);
     if($artistas_input_res === FALSE) { die(mysql_error()); }
     while($artistas_row = mysql_fetch_array($artistas_input_res)) {
@@ -144,27 +146,17 @@ class Recommendation_long_term_by_input extends Recommendation_short_term_by_inp
    */
   private function long_term($num) {
     $recommendation = array();
-
-    $my_connect = mysql_connect("localhost","root","");
-    if (!$this->my_connect) { die('Error connecting to the database: ' . mysql_error()); }
-    mysql_select_db("black_onion", $this->my_connect);
-    mysql_query("SET NAMES 'utf8'");
-    mysql_query('SET character_set_connection=utf8');
-    mysql_query('SET character_set_client=utf8');
-    mysql_query('SET character_set_results=utf8');
-    mb_internal_encoding("UTF-8");
-
     if(is_array($this->artistas)) {
         foreach($this->artistas as $artista) {
-          $query_db = "SELECT e.id_event, e.name, e.start_time, e.end_time, e.attending_count, e.ticket_uri, e.id_page, e.cover FROM tbevents_artista ea, tbevents e WHERE e.deprecated = FALSE AND $artista = id_fb_artista AND ea.id_event = e.id_event ORDER BY e.attending_count DESC";     
-          $events_res = mysql_query($query_db, $my_connect);
+          $query_db = "SELECT id_event FROM tbevents_artista WHERE $artista = id_fb_artista";     
+          $events_res = mysql_query($query_db, $this->my_connect);
           if($events_res === FALSE) { die(mysql_error()); }
           while($events_row = mysql_fetch_array($events_res)) {
-              array_push($recommendation, $events_row);
+              array_push($recommendation, $events_row['id_event']);
             }
           }
         }
-
+    var_dump($recommendation);
     return $recommendation;
   }
 
