@@ -53,7 +53,7 @@ class Recommendation_short_term implements IRecommendation {
     }
 
     public function find_events($num) {
-      $query_db = "SELECT e.id_event, e.name, e.start_time, e.end_time, e.attending_count, e.ticket_uri, e.id_page, e.cover FROM tbevents e WHERE e.deprecated = FALSE AND attending_count < $this->prev_atten ORDER BY attending_count DESC  LIMIT $num;";
+      $query_db = "SELECT DISTINCT e.id_event, e.name, e.start_time, e.end_time, e.attending_count, e.ticket_uri, e.id_page, e.cover FROM tbevents e WHERE e.deprecated = FALSE AND attending_count < $this->prev_atten ORDER BY attending_count DESC  LIMIT $num;";
       $events_res = mysql_query($query_db, $this->my_connect);
       if($events_res === FALSE) { die(mysql_error()); }
 
@@ -136,7 +136,7 @@ class Recommendation_long_term extends Recommendation_short_term {
     $this->artistas = $this->user_artistas;
     if(is_array($this->user_artistas)) {
         foreach($this->user_artistas as $artista) {
-            $query_db = "SELECT a2.id_fb FROM artista a1, artista a2, assemelha_artista aa
+            $query_db = "SELECT DISTINCT a2.id_fb FROM artista a1, artista a2, assemelha_artista aa
             WHERE a2.id_fb IS NOT NULL AND " .  mysql_real_escape_string($artista) .  " = a1.id_fb AND a1.id_spotify = aa.id_spotify_super and aa.id_spotify_sub = a2.id_spotify";
             $artistas_res = mysql_query($query_db, $this->my_connect);
             if($artistas_res === FALSE) { die(mysql_error()); }
@@ -157,15 +157,17 @@ class Recommendation_long_term extends Recommendation_short_term {
   private function long_term($num) {
     $recommendation = array();
     if(is_array($this->artistas)) {
-        foreach($this->artistas as $key => $artista) {
-          if(count($recommendation) >= $num ) break;
-          $query_db = "SELECT e.id_event, e.name, e.start_time, e.end_time, e.attending_count, e.ticket_uri, e.id_page, e.cover FROM tbevents_artista ea, tbevents e WHERE e.deprecated = FALSE AND $artista = id_fb_artista AND ea.id_event = e.id_event ORDER BY e.attending_count DESC";     
-          $events_res = mysql_query($query_db, $this->my_connect);
-          if($events_res === FALSE) { die(mysql_error()); }
-          while($events_row = mysql_fetch_array($events_res)) {
-            array_push($recommendation, $events_row);
-          }
-          unset($this->artistas[$key]);
+        $str_artista = "(FALSE";
+        foreach($this->artistas as $get_artist) {
+          $str_artista .= " OR id_fb_artista = '" . $get_artist . "'";
+        }
+        $str_artista .= " )";
+        if(count($recommendation) >= $num ) break;
+        $query_db = "SELECT DISTINCT e.id_event, e.name, e.start_time, e.end_time, e.attending_count, e.ticket_uri, e.id_page, e.cover FROM tbevents_artista ea, tbevents e WHERE e.deprecated = FALSE AND $str_artista AND ea.id_event = e.id_event ORDER BY e.attending_count DESC LIMIT 100";     
+        $events_res = mysql_query($query_db, $this->my_connect);
+        if($events_res === FALSE) { die(mysql_error()); }
+        while($events_row = mysql_fetch_array($events_res)) {
+          array_push($recommendation, $events_row);
         }
     }
 
@@ -187,8 +189,7 @@ class Recommendation_long_term extends Recommendation_short_term {
       $recommendation2 = $this->short_term($num - count($recommendation), $time, 0.5);
       $recommendation = array_merge($recommendation, $recommendation2);
     }
-    return $recommendation;
-
+    return array_unique($recommendation, SORT_REGULAR);
   }
 
 }

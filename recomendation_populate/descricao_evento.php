@@ -5,31 +5,31 @@
  *  GET parameter "force", force=1 if you don't want to use cache    
  */
 
+ini_set('memory_limit', '-1');
+
+function remover_caracter($string) {
+    $string = preg_replace("/[áàâãä]/", "a", $string);
+    $string = preg_replace("/[ÁÀÂÃÄ]/", "A", $string);
+    $string = preg_replace("/[éèê]/", "e", $string);
+    $string = preg_replace("/[ÉÈÊ]/", "E", $string);
+    $string = preg_replace("/[íì]/", "i", $string);
+    $string = preg_replace("/[ÍÌ]/", "I", $string);
+    $string = preg_replace("/[óòôõö]/", "o", $string);
+    $string = preg_replace("/[ÓÒÔÕÖ]/", "O", $string);
+    $string = preg_replace("/[úùü]/", "u", $string);
+    $string = preg_replace("/[ÚÙÜ]/", "U", $string);
+    $string = preg_replace("/ç/", "c", $string);
+    $string = preg_replace("/Ç/", "C", $string);
+    $string = preg_replace("/[][><}{)(:;,!?*%~^`&#@]/", "", $string);
+    $string = preg_replace("/ /", "_", $string);
+    return $string;
+}
+ 
 require dirname(__FILE__) . "/TextProcessingAlgorithms/AhoCorasick.php";
 require dirname(__FILE__) . "/TextProcessingAlgorithms/TreeNodes.php";
 
 $filePath = dirname(__FILE__) . '/serializedData.dat';
 $memoryWhole = memory_get_usage();
-$inputText = strtolower('Sexta 23 de Outubro a partir das 22h 
-ARIANA GRANDE, NICK JONAS, LEA MICHELE, RYAN MURPHY & CHANEL OBERLIN orgulhosamente apresentam
-"SCREAM QUEENS & AMERICAN HORROR STORY! POP FICTION ED.ESPECIAL ESQUENTA HALLOWEEN PRÉ ÓRFÃOS! DOUBLE CARAVELA ROXA, FREE BLOODY SHOTS, FREE MARSHMALLOWS & GOSTOSURAS, HORROR MOVIES NO TELÃO! PLUS TAYLOR SWIFT.ARIANA.NICK JONAS.LADY GAGA & MORE!"
-Jay
-Pink Floyd doidao fodão com Avicii vai tocar hj caraiu e The Doors 50 Cent
-
-RYAN MURPHY (CRIADOR DE GLEE E AMERICAN HORROR STORY), ARIANA GRANDE, NICK JONAS, LEA MICHELE, & "CHANEL OBERLIN" te convidam em primeira mão pra curtir a festa de esquenta HALLOWEEN PRÉ ÓRFÃOS!
-SCREAM QUEENS, COM DOUBLE CARAVELA ROXA, FREE BLOODY SHOTS, FREE MARSHMALLOWS & GOSTOSURAS, HORROR MOVIES NO TELÃO! 
-E NA PISTA HITS DA POP FICTION E COISAS QUE VOCÊS ADORAM DAS FESTAS DA CASINHA: 
-DE TAYLOR SWIFT A MARILYN MANSON, DE ARIANA GRANDE A MICHAEL JACKSON, DE NICK JONAS A EVANSCENCE, DE TEMAS INCIDENTAIS A LADY GAGA!"
-
-:: NO TELÃO, SCREAM QUEENS, AMERICAN HORROR STORY, CLASSICAL HORRO MOVIES!
-:: DOUBLE CARAVELA ROXA!
-:: FREE BLOODY SHOTS, FREE MARSHMALLOWS & GOSTOSURAS!
-
-POP FICTION = FESTA COM FILMES, SERIADOS, ENTRETENIMENTO, TEMÁTICAS E CULTURA RETRÔ! TUDO JUNTO NUMA FESTA SÓ!
-
-:: NA PISTA!
-Trilhas de filmes e seriados, e também o melhor da cultura retrô! de 70s a 00s! de David Bowie a Oasis, de Donna Summer a Aguilera, de Pet Shop Boys a Gigi Dagostino, de ABBA a Spice Girls, de Blondie a Bon Jovi!
-e também o melhor do que toca nas festas da casinha! Lady Gaga, Ariana Grande, Pharrel Williams, Lana Del Rey, Jessie J, Imagine Dragons, Katy Perry, Avicii, Kiesza, Clean Bandit, Neon Jungle, Lorde, Ellie Goulding, Calvin Harris, David Guetta, Iggy Azalea, Little Mix, Ke$ha, Disclosure, Florence + The Machine, Daft Punk, Bella Thorne, Nicki Minaj, Demi Lovato, Zedd, One Direction, Bonnie Mckee, Lykke Li, The Wanted, Justin Bieber, Taylor Swift, Marina & The Diamonds, Maroon 5, Bruno Mars, Avril Lavigne, Rita Ora, Rihanna, Britney Spears, Selena Gomez, Shakira, Kylie Minogue, J.Lo, Foster The People, Two Door Cinema Club, Mika, Phoenix, 3OH!3, Cobra Starship, Hyper Crush, Millionaires, The Ready Set, Neon Trees, Train, Kelly Clarkson, The Killers, Gossip, Paramore, Neon Hitch, Cher Lloyd, Coldplay, Yeah Yeah Yeahs & Cia!');
 
 
 function getKeywords() { 
@@ -37,7 +37,7 @@ function getKeywords() {
 
 	$my_connect = mysql_connect("localhost","root","");
 	if (!$my_connect) { die('Error connecting to the database: ' . mysql_error()); }
-	mysql_select_db("modulo_musias", $my_connect);
+	mysql_select_db("black_onion", $my_connect);
 	mysql_query("SET NAMES 'utf8'");
 	mysql_query('SET character_set_connection=utf8');
 	mysql_query('SET character_set_client=utf8');
@@ -45,12 +45,12 @@ function getKeywords() {
 	mb_internal_encoding("UTF-8");
 
 	/** Pegando os artistas **/
-	$query_db = "SELECT id_fb, nome_artista FROM artista WHERE id_fb IS NOT NULL ORDER BY popularidade DESC";
+	$query_db = "SELECT id_fb, nome_artista FROM artista WHERE id_fb AND popularidade > 40 IS NOT NULL ORDER BY popularidade DESC";
 	$artistas_res = mysql_query($query_db, $my_connect);
 	if($artistas_res === FALSE) { die(mysql_error()); }
   $i = 0;
 	while($artista = mysql_fetch_array($artistas_res)) {
-	   $keywords[$i]['keyword'] =  strtolower($artista['nome_artista']);
+	   $keywords[$i]['keyword'] =  remover_caracter(strtolower($artista['nome_artista']));
      $keywords[$i]['id_fb'] = $artista['id_fb'];
      $i++;
 	}
@@ -71,15 +71,14 @@ function saveToCache($tree, $filePath) {
     fclose($fh);
     echo 'cache size: ' . (filesize($filePath) / 1024) . " kB<br />";
 }
-
-?>
-
-<html>
-<head>
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-</head>
-<body>
-  <?php
+  $my_connect = mysql_connect("localhost","root","");
+  if (!$my_connect) { die('Error connecting to the database: ' . mysql_error()); }
+  mysql_select_db("black_onion", $my_connect);
+  mysql_query("SET NAMES 'utf8'");
+  mysql_query('SET character_set_connection=utf8');
+  mysql_query('SET character_set_client=utf8');
+  mysql_query('SET character_set_results=utf8');
+  mb_internal_encoding("UTF-8");
   
   if (!file_exists($filePath) || (isset($_GET['force']))) {
       $ac = new AhoCorasick();
@@ -97,18 +96,25 @@ function saveToCache($tree, $filePath) {
       $ac = unserialize(file_get_contents($filePath));
   }
 
-  $res = $ac->FindAll($inputText);
-  memUsage($memoryWhole, "Memory (after find all):");
-  memUsage($memoryWhole, "Memory whole:");
-  unset($ac);
-  echo "<b>Results: </b><pre>";var_dump($res);echo "</pre>";
-  $res_artistas = array();
-  foreach ($res as $res_artista) {
-    if(!in_array($res_artista[1]["id_fb"], $res_artistas))
-      array_push($res_artistas, $res_artista[1]["id_fb"]);
-  }
+  $query_db_events = "SELECT id_event, name, description FROM tbevents ORDER BY `attending_count` DESC";
+  $events_res = mysql_query($query_db_events, $my_connect);
+  
+  if($events_res === FALSE) { die(mysql_error()); }
+  while($event = mysql_fetch_array($events_res)) {
+    $res = $ac->FindAll(remover_caracter(strtolower($event['name'] . "             " . $event['description'])));
+    $res_artistas = array();
+    foreach ($res as $res_artista) {
+      if(!in_array($res_artista[1]["id_fb"], $res_artistas))
+        array_push($res_artistas, $res_artista[1]["id_fb"]);
+    }
 
-  var_dump($res_artistas);
+    foreach ($res_artistas as $artista) {
+          mysql_query("INSERT INTO tbevents_artista VALUES ('" .
+          $artista . "','" .
+          $event['id_event'] . "'" .
+          ");"
+      );
+    }
+  }
+  unset($ac);
 ?>
-</body>
-</html>

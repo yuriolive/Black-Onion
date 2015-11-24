@@ -42,7 +42,7 @@ function get_nearest_timezone($cur_lat, $cur_long, $country_code = '') {
 
 
 <?php
-
+    error_reporting(E_ERROR);
     /********
      ** Main Program
      **
@@ -50,29 +50,13 @@ function get_nearest_timezone($cur_lat, $cur_long, $country_code = '') {
      */
 	session_start();
 
-//var_dump($_SESSION['fb_access_token']);
-//var_dump($_COOKIE['location']);
+
+    include("/algorithms/recommend.php");
+    include("/algorithms/inputRecommendation.php");
+    include("/algorithms/eventsRecommendation.php");
 
 	/** Verificando se a sessao e a localizacao estao OK's **/
 
-
-
-
-	/** Decodificando a posicao **/
-	if(isset($_COOKIE['location']) && isset($_SESSION['fb_access_token'])) {
-        $position = explode('|', $_COOKIE['location']);
-        $lat = $position[0];
-        $lng = $position[1];
-
-        $fbtoken = $_SESSION['fb_access_token'];
-    } else {
-        #abaixo, criamos uma variavel que terá como conteúdo o endereço para onde haverá o redirecionamento:  
-        $redirect = "../index.php";
-
-        #abaixo, chamamos a função header() com o atributo location: apontando para a variavel $redirect, que por 
-        #sua vez aponta para o endereço de onde ocorrerá o redirecionamento
-        header("location:$redirect");
-    }
 
     //$heading = $position[2];
 
@@ -95,88 +79,45 @@ function get_nearest_timezone($cur_lat, $cur_long, $country_code = '') {
     //$lat = -22.9782643;
     //$lng = -43.1921606;
 
-	/** Estabelecendo a conexao com o banco de dados **/
-    $my_connect = mysql_connect("localhost","root","");
-    if (!$my_connect) { die('Error connecting to the database: ' . mysql_error()); }
-    mysql_select_db("black_onion", $my_connect);
-    mysql_query("SET NAMES 'utf8'");
-    mysql_query('SET character_set_connection=utf8');
-    mysql_query('SET character_set_client=utf8');
-    mysql_query('SET character_set_results=utf8');
-    mb_internal_encoding("UTF-8");
-    $context = stream_context_create(
-        array(
-            'http' => array(
-                'method' => "GET",
-                'header'=>'Connection:keep-alive\r\n'
-            )
-        )
-    );
+    $location = explode("|", $_COOKIE['location']);
 
-    /** Pegando os lugares **/
-    $query_db = sprintf("SELECT id FROM tbpagefb WHERE (lat < %f AND lat >= %f AND lng < %f AND lng >= %f) ORDER BY `likes` DESC LIMIT 300", 
-    			$lat+0.1, $lat-0.1, $lng+0.1, $lng-0.1);
-
-    $pages = array();
-    $pages_res = mysql_query($query_db, $my_connect);
-    if($pages_res === FALSE) { die(mysql_error()); }
-    while($pages_row = mysql_fetch_array($pages_res)) {
-       array_push($pages, $pages_row['id']);
-    }
-
-    date_default_timezone_set(get_nearest_timezone($lat, $lng, 'BR'));
-    $time = time();
-    //var_dump(date(DATE_ATOM, $time));
-    $idEvents = array();
-    $events = array();
-    $number_events = 0;
-    while(count($pages) > 0) {
-        $query_pages = "";
-        $counter = 0;
-        foreach ($pages as $key => $page) {
-            if($counter++ > 40)
-                break;
-            $query_pages .= $page . ",";
-            unset($pages[$key]);
-        }
-
-        $query_pages = substr($query_pages, 0, -1);
-        /** TODO Pegar timezone automaticamente **/
-        $fburl = "https://graph.facebook.com/events?ids=" . $query_pages . "&since=" . ($time - 60*60*4) . "&until=" . date("Y-m-d", $time) . "T24:00:00-0300" .
-            "&fields=cover,name,place,start_time,owner&access_token=$fbtoken"; /* Toh pegando até quatro horas depois o evento */
-
-        /*
-        Debug Porpouse 
-        $fburl = "https://graph.facebook.com/events?ids=" . $query_pages . "&since=" . ($time - 60*60) .
-        "&fields=cover,name,place,start_time,owner&access_token=$fbtoken";*/
-
-        $json_events = file_get_contents($fburl, false, $context);
-
-        if($json_events === FALSE) {
-            #abaixo, criamos uma variavel que terá como conteúdo o endereço para onde haverá o redirecionamento:  
-            $redirect = "../index.php";
-
-            #abaixo, chamamos a função header() com o atributo location: apontando para a variavel $redirect, que por 
-            #sua vez aponta para o endereço de onde ocorrerá o redirecionamento
-            header("location:$redirect");
-        }
-
-        $places_events = json_decode($json_events, true);
-        // Limitar 1 evento na mesma data de um mesmo local
-        foreach ($places_events as $place_events) {
-            foreach ($place_events['data'] as $place_event) {
-                if(!in_array($place_event['id'], $idEvents)) {
-                    array_push($events, $place_event);
-                    array_push($idEvents, $place_event['id']);
-                    $number_events++;
-                }
-            }
-        }
-
-        if($number_events >= 20) {
+    switch ($_GET['tipo']) {
+        case 0:
+            $recommend = new Recommendation_short_term($location[0], $location[1]);
+            $events = $recommend->recommendation(50);
             break;
-        }
+
+        case 1:
+            $fburl = "https://graph.facebook.com/me?fields=id,name,music&access_token=".$_SESSION['fb_access_token'];
+            $json_user = file_get_contents($fburl, false);
+            $user = json_decode($json_user, true);
+            $artists = array();
+
+            foreach ($user['music']['data'] as $user_artist) {
+                array_push($artists, $user_artist['id']);
+            }
+
+            $recommend = new Recommendation_long_term($location[0], $location[1], $artists);
+            $events = $recommend->recommendation(50);
+            $recommend->destruct();
+            break;
+
+        case 2:
+            $fburl = "https://graph.facebook.com/me?fields=id,name,events&access_token=".$_SESSION['fb_access_token'];
+            $json_user = file_get_contents($fburl, false);
+            $user = json_decode($json_user, true);
+
+            $r = new HistoricRecomendation($user['id'],$user['events']['data'],"black_onion");
+            $events = $r->recommendation(50);
+
+            break;
+
+        case 3:
+            $recommend = new Recommendation_long_term_by_input($_GET['busca']);
+            $events = $recommend->recommendation(50);
+            break;
     }
+
 ?>
 
 
@@ -310,11 +251,12 @@ function get_nearest_timezone($cur_lat, $cur_long, $country_code = '') {
             <?php 
             foreach ($events as $event) { ?>
                 <div class="event-item">
-                    <div class="image-list-container"><img src="<?php echo $event['cover']['source']; ?>" class="event-picture"></div>
+                    <div class="image-list-container"><img src="<?php echo $event['cover']; ?>" class="event-picture"></div>
                     <p class="event-name"><?php echo $event['name']; ?></p>
-                    <p>Local: <?php echo (isset($event['place']['name']) ? $event['place']['name'] : $event['owner']['name']); ?></p>
-                    <p>Horario: <?php echo date('l jS \of F h:i:s A', strtotime($event['start_time'])); ?></p>
-                    <a href="https://www.facebook.com/<?php echo $event['id']; ?>" target="_blank">Mais informações</a>
+                    <p>Confirmados: <?php echo $event['attending_count']; ?></p>
+                    <?php $time = explode("T", substr($event['start_time'], 0, 19)); ?>
+                    <p>Horario: <?php echo date('l jS \of F Y h:i:s A', strtotime($time[0]." ".$time[1])); ?></p>
+                    <a href="https://www.facebook.com/<?php echo $event['id_event']; ?>" target="_blank">Mais informações</a>
                 </div>
             <?php
             } ?>
